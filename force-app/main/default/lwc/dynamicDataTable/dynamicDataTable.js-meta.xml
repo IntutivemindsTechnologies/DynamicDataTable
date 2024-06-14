@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>59.0</apiVersion>
+    <isExposed>true</isExposed>
+     <targets>
+    <target> lightning__HomePage</target>
+    <target> lightning__RecordPage</target>
+    <target> lightning__AppPage</target>
+    <target> lightning__FlowScreen</target>
+    </targets>
+    <targetConfigs>
+    <targetConfig targets="lightning__HomePage,lightning__RecordPage, lightning__AppPage">
+   
+   <property name="tableData" type="String"  label="JSON/SOQL Data" description="Enter JSON or SOQL Input" />
+    <property name="checkBoxVisibile" type="Boolean" default="false" label="Enable Row Selection"  description="Disable/Enable the selection of row"/>
+   <property name="objectLabel" type="String"  label="Header Text" description="Enter header text for datatable" />
+    <property name="showtoggle" type="Boolean"  default="false" label="Enable Toggle IDs(Not applicable in JSON input)" />
+
+</targetConfig>
+
+ <targetConfig targets="lightning__FlowScreen">
+  
+  <property name="tableData" type="String"  label="JSON/SOQL Data" role="inputOnly" description="Enter JSON or SOQL Input"/>
+<propertyType name="T" extends="SObject" label="Select SObject"  />        
+   <property name="flowRecord" type="{T[]}" label="Record" role="inputOnly" description="Enter FlowRecord Input"/>
+    <property name="output" type="String" role="outputOnly" />
+     <property name="checkBoxVisibile" type="Boolean" label="Row Selection" default="false" role="inputOnly" description="Disable/Enable the selection of row"/>
+  <property name="objectLabel" type="String"  label="Header Text" role="inputOnly" description="Enter header text for datatable" />
+  <property name="showtoggle" type="Boolean"  default="false" label="Enable Toggle IDs(Not applicable in JSON/Flow record input)" />
+ </targetConfig>
+
+    </targetConfigs>
+</LightningComponentBundle>
