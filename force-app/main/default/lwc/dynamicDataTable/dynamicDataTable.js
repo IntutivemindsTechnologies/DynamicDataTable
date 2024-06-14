@@ -78,7 +78,7 @@ export default class DynamicDataTable extends LightningElement {
                         this.objectLabel = 'JSON Data';
                     }
                     this.iconName = 'standard:dataset';
-                } 
+                }
                 // Condition for Soql input
                 else if (this.tableData && this.tableData.toLowerCase().trim().indexOf("select") === 0) {
                     this.soql = this.tableData;
@@ -97,7 +97,7 @@ export default class DynamicDataTable extends LightningElement {
                     this.showReferenceToggle = true;
                     this.getSoqlData();
                 }
-                 else {
+                else {
                     this.isLoading = false;
                     this.tableData = false;
                     this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
@@ -408,7 +408,7 @@ export default class DynamicDataTable extends LightningElement {
                     input.style.border = 'none';
                     input.style.width = 'auto';
                     const td = document.createElement('td');
-                 
+
                     if (this.soql) {
                         if (this.inlineEditing) {
                             if (header.includes('.')) {
@@ -494,7 +494,7 @@ export default class DynamicDataTable extends LightningElement {
                     else {
                         td.textContent = row[header] == undefined ? '' : row[header];
                     }
-                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name') {   
+                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name') {
                         td.appendChild(input);
                     }
                     if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
