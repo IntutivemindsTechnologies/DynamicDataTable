@@ -30,7 +30,7 @@
                             </div>
                             <div class="slds-media__body">
 
-                               
+
 
                             </div>
                             <div class="slds-no-flex">
@@ -39,13 +39,13 @@
 
                                     <li class="slds-button-group-item">
                                         <template if:true={showtoggle}>
-                                        <template if:true={showReferenceToggle}>
-                                            <lightning-input type="toggle" label="Toggle Ids" class="cursor:pointer;"
-                                                title="Toggle Ids" checked={toggleIdColumn} onchange={handleIdColumn}
-                                                message-toggle-active="Enabled"
-                                                message-toggle-inactive="Disabled"></lightning-input>
+                                            <template if:true={showReferenceToggle}>
+                                                <lightning-input type="toggle" label="Toggle Ids"
+                                                    class="cursor:pointer;" title="Toggle Ids" checked={toggleIdColumn}
+                                                    onchange={handleIdColumn} message-toggle-active="Enabled"
+                                                    message-toggle-inactive="Disabled"></lightning-input>
+                                            </template>
                                         </template>
-                                    </template>
                                     </li>
 
                                     <li class="slds-button-group-item">
@@ -70,7 +70,7 @@
 
                         <div
                             class="slds-col slds-size_1-of-6 slds-p-vertical_medium slds-grid slds-align_absolute-center">
-                           
+
                         </div>
 
                         <div class="scrollable-content  " onscroll={handleScroll}>
@@ -83,15 +83,15 @@
                                         <th style="display:none;"></th>
                                         <template if:true={checkBoxVisibile}>
 
-                                        <th data-index=0>
-                                            <input type="checkbox" onchange={checkAllCheckboxes}
-                                                checked={isMainCheckboxChecked}>
-                                        </th>
-                                    </template>
-                                       
+                                            <th data-index=0>
+                                                <input type="checkbox" onchange={checkAllCheckboxes}
+                                                    checked={isMainCheckboxChecked}>
+                                            </th>
+                                        </template>
+
                                         <template if:true={tableHeaderLabel}>
                                             <template for:each={tableHeaderLabel} for:item="header" for:index="index">
-                                                
+
                                                 <th key={header} scope="col" onclick={handleSort}
                                                     onmouseenter={handleHeaderName} draggable="true"
                                                     ondragstart={handleDragStart} ondrop={handleDrop}
@@ -174,7 +174,7 @@
                     <footer class="slds-card__footer">
 
                         <div class="slds-col slds-size_1-of-6 slds-p-top_x-small slds-grid slds-align_absolute-center">
-                          
+
                         </div>
 
                     </footer>
@@ -185,7 +185,7 @@
 
                 <!--Table rendering ends-->
 
-               
+
 
             </template>
 
