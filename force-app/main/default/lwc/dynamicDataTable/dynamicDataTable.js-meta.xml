@@ -11,7 +11,7 @@
 <targetConfigs>
 <targetConfig targets="lightning__HomePage,lightning__RecordPage, lightning__AppPage">
 
-<property name="tableData" type="String"  label="DataSource-(JSON/SOQL)" description="Please enter a valid JSON or SOQL query" />
+<property name="tableData" type="String"  label="DataSource [JSON/SOQL]" description="Please enter a valid JSON or SOQL query" />
 <property name="checkBoxVisibile" type="Boolean" default="false" label="Row Selection"  description="This feature allows Enable/Disable row selection in DynamicDataTable"/>
 <property name="objectLabel" type="String"  label="Header Text" description="Override header for DynamicDataTable" />
 <property name="showtoggle" type="Boolean"  default="false" label="Enable Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
