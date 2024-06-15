@@ -20,9 +20,9 @@
 
 <targetConfig targets="lightning__FlowScreen">
 
-<property name="tableData" type="String"  label="DataSource-(JSON/SOQL)" role="inputOnly" description="Please enter a valid JSON or SOQL query"/>
+<property name="tableData" type="String"  label="DataSource [JSON/SOQL]" role="inputOnly" description="Please enter a valid JSON or SOQL query"/>
 <propertyType name="T" extends="SObject" label="Select SObject"  />        
-<property name="flowRecord" type="{T[]}" label="Record" role="inputOnly" description="Enter FlowRecord Input"/>
+<property name="flowRecord" type="{T[]}" label="Set FlowRecord" role="inputOnly" description="Enter FlowRecord Input"/>
 <property name="output" type="String" role="outputOnly" />
     <property name="checkBoxVisibile" type="Boolean" label="Row Selection" default="false" role="inputOnly" description="This feature allows Enable/Disable row selection in DynamicDataTable"/>
 <property name="objectLabel" type="String"  label="Header Text" role="inputOnly" description="Override header for DynamicDataTable" />
