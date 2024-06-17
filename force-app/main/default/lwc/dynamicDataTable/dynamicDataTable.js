@@ -726,7 +726,7 @@ export default class DynamicDataTable extends LightningElement {
         const inputField = this.template.querySelector('lightning-input');
         inputField.value = '';
     }
-    // Handle the drop position for olumn header
+    // Handle the drop position for column header
     handleDrop(event) {
         const fromIndex = event.dataTransfer.getData('text');
         const toIndex = event.currentTarget.dataset.index;
@@ -1015,7 +1015,7 @@ export default class DynamicDataTable extends LightningElement {
                 });
             }
             else {
-                this.filteredData = this.filteredData.filter(item =>//{
+                this.filteredData = this.filteredData.filter(item =>
                     String(item[header]).toLowerCase().includes(filterValue)
                 );
             }
