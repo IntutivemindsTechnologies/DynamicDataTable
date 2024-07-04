@@ -1,0 +1,74 @@
+.checkbox-column {
+    transform: scale(0.85);
+}
+
+.scrollable-content {
+    overflow-y: auto;
+    height: 300px;
+}
+
+.scrollable-content thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.arrowIcon {
+    display: none;
+}
+
+.thTag:hover .arrowIcon {
+
+    display: inline-block;
+    cursor: pointer;
+}
+
+.thTag .arrowIconShow {
+    display: inline-block;
+}
+
+.loadingSpinner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.containerTable {
+    background-color: white;
+
+}
+
+.labelClass {
+    margin-left: 2.5rem;
+    margin-bottom: -1.8rem;
+    font-size: large
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.searchClass {
+    padding-bottom: 1rem;
+}
+
+.scrollingSpinner {
+    position: fixed;
+    top: 80%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.customClass {
+    padding-top: 1.2rem;
+}
+
+.slds-dropdown {
+    position: absolute;
+    top: 6.5rem;
+    z-index: 1000;
+    right: 10.9rem;
+}

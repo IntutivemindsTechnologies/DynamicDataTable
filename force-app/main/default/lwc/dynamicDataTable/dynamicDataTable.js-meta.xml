@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+<apiVersion>59.0</apiVersion>
+<isExposed>true</isExposed>
+    <targets>
+<target> lightning__HomePage</target>
+<target> lightning__RecordPage</target>
+<target> lightning__AppPage</target>
+<target> lightning__FlowScreen</target>
+</targets>
+<targetConfigs>
+<targetConfig targets="lightning__HomePage,lightning__RecordPage, lightning__AppPage">
+
+<property name="tableData" type="String"  label="DataSource [JSON/SOQL]" description="Please enter a valid JSON or SOQL query" />
+<property name="checkBoxVisibile" type="Boolean" default="false" label="Row Selection"  description="This feature allows Enable/Disable row selection in DynamicDataTable"/>
+<property name="objectLabel" type="String"  label="Header Text" description="Override header for DynamicDataTable" />
+<property name="showtoggle" type="Boolean"  default="false" label="Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
+
+</targetConfig>
+
+<targetConfig targets="lightning__FlowScreen">
+
+<property name="tableData" type="String"  label="DataSource [JSON/SOQL]" role="inputOnly" description="Please enter a valid JSON or SOQL query"/>
+<propertyType name="T" extends="SObject" label="Select SObject"  />        
+<property name="flowRecord" type="{T[]}" label="Set FlowRecord" role="inputOnly" description="Enter FlowRecord Input"/>
+<property name="output" type="String" role="outputOnly" />
+<property name="checkBoxVisibile" type="Boolean" label="Row Selection" default="false" role="inputOnly" description="This feature allows Enable/Disable row selection in DynamicDataTable"/>
+<property name="objectLabel" type="String"  label="Header Text" role="inputOnly" description="Override header for DynamicDataTable" />
+<property name="showtoggle" type="Boolean"  default="false" label="Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
+</targetConfig>
+
+</targetConfigs>
+</LightningComponentBundle>
