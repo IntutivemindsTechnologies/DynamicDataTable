@@ -45,7 +45,7 @@ static void testStandardObjectFieldsWithFieldMap() {
     System.assertEquals('Account Name', result);
 }
 
-    @IsTest
+@IsTest
 static void testGetDataFromQueryStandardFields() {
     Account testAccount = new Account(Name = 'Test Account');
     insert testAccount;
