@@ -180,7 +180,8 @@ export default class DynamicDataTable extends LightningElement {
         getList({ query: this.soql, limitSize: this.rowSize, offset: this.rowOffset })
             .then(async result => {
                 this.tableData = JSON.parse(result);
-                if (this.tableData.length === 0) {
+
+                if (this.tableData.length === 0 && this.globalData.length === 0) {
                     this.tableData = false;
                     this.showNoDataMessage = true;
                     this.isLoading = false;
@@ -572,7 +573,7 @@ export default class DynamicDataTable extends LightningElement {
     handleScroll(event) {
         if (event.target.scrollTop !== 0) {
             if (this.isScrolledToBottom(event.target) && !this.scrolled) {
-                console.log('scrolled to bottom');
+
                 this.scrolled = true;
                 if (this.enableInfiniteLoading) {
                     this.showSubmit = false;
@@ -1090,7 +1091,7 @@ export default class DynamicDataTable extends LightningElement {
                 this.selectedRows.splice(index, 1);
             }
         }
-        console.log('selected rows :', this.selectedRows);
+
         this.output = JSON.stringify(this.selectedRows);
 
     }

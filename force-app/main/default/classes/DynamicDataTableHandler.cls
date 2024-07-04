@@ -47,8 +47,9 @@ public with sharing class DynamicDataTableHandler {
                     fieldLabel=fieldLabel+' ID';
                 }
             }
-            if(fieldName=='Name' && !fieldLabel.contains(objectName)){
-                fieldLabel=objectName+' '+fieldLabel;
+            SObjectType objToken = Schema.getGlobalDescribe().get(objectname);
+            if(fieldName=='Name' && !fieldLabel.contains(objectname)){
+                fieldLabel=objToken+' '+fieldLabel;
             }   
         }
         return fieldLabel;    
@@ -195,12 +196,13 @@ public with sharing class DynamicDataTableHandler {
             objectName = objectMatcher.group(1);
         }
         SObjectType objToken = Schema.getGlobalDescribe().get(objectname);
+        
         if(objToken  != null && objToken.getDescribe().isCustom()) {
             iconName='custom:';
         } else {
             iconName='standard:';
         }
-        String iconQuery='SELECT (SELECT Url FROM Icons WHERE ContentType LIKE \'image/svg%\') FROM TabDefinition WHERE SobjectName =\'' + objectName + '\'';
+        String iconQuery='SELECT (SELECT Url FROM Icons WHERE ContentType LIKE \'image/svg%\') FROM TabDefinition WHERE SobjectName =\'' + objToken + '\'';
         TabDefinition tabDefinitionRecord = (TabDefinition)Database.query(iconQuery);
         if (tabDefinitionRecord.Icons != null ) {
             String iconUrl = tabDefinitionRecord.Icons[0].Url; 
@@ -211,6 +213,7 @@ public with sharing class DynamicDataTableHandler {
         }
         return iconName;   
     }
+    
     
     @TestVisible 
     private static String getReferenceField(String sObjectName, String fieldAPIName){
