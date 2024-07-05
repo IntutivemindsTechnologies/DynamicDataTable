@@ -203,7 +203,7 @@ public with sharing class DynamicDataTableHandler {
             iconName='standard:';
         }
         String iconQuery='SELECT (SELECT Url FROM Icons WHERE ContentType LIKE \'image/svg%\') FROM TabDefinition WHERE SobjectName =\'' + objToken + '\'';
-        TabDefinition tabDefinitionRecord = (TabDefinition)Database.query(iconQuery);
+        TabDefinition tabDefinitionRecord = (TabDefinition)Database.query(iconQuery)[0];
         if (tabDefinitionRecord.Icons != null ) {
             String iconUrl = tabDefinitionRecord.Icons[0].Url; 
             List<String> urlParts = iconUrl.split('/');

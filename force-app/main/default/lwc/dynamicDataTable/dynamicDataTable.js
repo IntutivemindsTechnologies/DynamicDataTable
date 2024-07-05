@@ -58,7 +58,7 @@ export default class DynamicDataTable extends LightningElement {
     filteredData = [];
     @api checkForFilteredList;
     @api checkBoxVisibile = false;
-    @api showtoggle;
+    @api showtoggle = false;
 
 
     connectedCallback() {
