@@ -15,7 +15,7 @@
 <property name="checkBoxVisibile" type="Boolean" default="false" label="Row Selection"  description="This feature allows Enable/Disable row selection in DynamicDataTable"/>
 <property name="objectLabel" type="String"  label="Header Text" description="Override header for DynamicDataTable" />
 <property name="showtoggle" type="Boolean"  default="false" label="Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
-
+<property name="inlineEditing" type="Boolean" default="false" label="Allow In-Line Editing (Not applicable in JSON input)" />
 </targetConfig>
 
 <targetConfig targets="lightning__FlowScreen">
@@ -27,6 +27,7 @@
 <property name="checkBoxVisibile" type="Boolean" label="Row Selection" default="false" role="inputOnly" description="This feature allows Enable/Disable row selection in DynamicDataTable"/>
 <property name="objectLabel" type="String"  label="Header Text" role="inputOnly" description="Override header for DynamicDataTable" />
 <property name="showtoggle" type="Boolean"  default="false" label="Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
+<property name="inlineEditing" type="Boolean" default="false" label="Allow In-Line Editing (Not applicable in JSON input)" />
 </targetConfig>
 
 </targetConfigs>

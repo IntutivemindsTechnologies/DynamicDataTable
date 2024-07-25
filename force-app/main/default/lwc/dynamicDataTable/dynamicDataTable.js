@@ -5,6 +5,12 @@ import getUpdateStatus from '@salesforce/apex/DynamicDataTableHandler.getUpdateS
 import getList from '@salesforce/apex/DynamicDataTableHandler.getDataFromQuery';
 import getObjectLabelName from '@salesforce/apex/DynamicDataTableHandler.getObjectLabelName';
 import iconNamesForObjects from '@salesforce/apex/DynamicDataTableHandler.iconNamesForObjects';
+import updateSObject from '@salesforce/apex/DynamicDataTableHandler.updateSObject';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import getMapofTypeForFields from '@salesforce/apex/DynamicDataTableHandler.getMapofTypeForFields';
+import getPicklistValue from '@salesforce/apex/DynamicDataTableHandler.getPicklistValue';
+import getMapofRequiredField from '@salesforce/apex/DynamicDataTableHandler.getMapofRequiredField';
+
 
 export default class DynamicDataTable extends LightningElement {
 
@@ -47,7 +53,7 @@ export default class DynamicDataTable extends LightningElement {
     iconName;
     @api showReferenceToggle = false;
     @api globalSearchResult = [];
-    inlineEditing = false;
+    @api inlineEditing = false;
     @track activeHeader = null;
     @track showNoDataMessage;
     @track showHeaderName;
@@ -59,6 +65,16 @@ export default class DynamicDataTable extends LightningElement {
     @api checkForFilteredList;
     @api checkBoxVisibile = false;
     @api showtoggle = false;
+    @api editedIds = [];
+    @api fieldTypeMap = {};
+    @api requiredFieldMap = {};
+    @api pickListChange = false;
+    @api handleKeyup = null;
+    @api handleBlur = null;
+    successToastMessage;
+    errorToastMessage;
+
+
 
 
     connectedCallback() {
@@ -138,6 +154,9 @@ export default class DynamicDataTable extends LightningElement {
 
     // Fetches SOQL data and processes it
     getSoqlData() {
+
+
+
         //Function to check if a value is a valid ID
         function isIds(value) {
             return typeof value === 'string' && /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/.test(value);
@@ -181,6 +200,14 @@ export default class DynamicDataTable extends LightningElement {
             .then(async result => {
                 this.tableData = JSON.parse(result);
 
+
+                this.fieldTypeMap = await getMapofTypeForFields({ query: this.soql });
+
+
+                this.requiredFieldMap = await getMapofRequiredField({ query: this.soql });
+
+
+
                 if (this.tableData.length === 0 && this.globalData.length === 0) {
                     this.tableData = false;
                     this.showNoDataMessage = true;
@@ -203,6 +230,7 @@ export default class DynamicDataTable extends LightningElement {
                     }
 
                     if (this.toggleIdColumn == true && this.showtoggle == true) {
+
                         for (const entry of this.tableData) {
                             for (const header of Object.keys(entry)) {
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
@@ -255,6 +283,7 @@ export default class DynamicDataTable extends LightningElement {
                         }
                     }
                     else if (this.toggleIdColumn == true && this.showtoggle == false) {
+
                         for (const entry of this.tableData) {
                             for (const header of Object.keys(entry)) {
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
@@ -402,6 +431,7 @@ export default class DynamicDataTable extends LightningElement {
                     tr.appendChild(checkboxCell);
                 }
 
+
                 this.tableHeaders.forEach((header, index) => {
                     const input = document.createElement('input');
                     input.type = 'text';
@@ -409,6 +439,8 @@ export default class DynamicDataTable extends LightningElement {
                     input.style.border = 'none';
                     input.style.width = 'auto';
                     const td = document.createElement('td');
+                    td.dataset.type = this.fieldTypeMap[header];
+
 
                     if (this.soql) {
                         if (this.inlineEditing) {
@@ -442,7 +474,83 @@ export default class DynamicDataTable extends LightningElement {
                                 td.textContent = row[header] == undefined ? '' : row[header];
                             }
                             else {
-                                input.value = row[header] == undefined ? '' : row[header];
+                                if (this.fieldTypeMap[header] == 'BOOLEAN' && this.isUpdatableMap[header]) {
+                                    td.textContent = row[header];
+                                    td.dataset.header = header;
+
+
+                                }
+                                else if (this.fieldTypeMap[header] == 'PICKLIST') {
+                                    td.dataset.value = row[header];
+                                    td.dataset.header = header;
+                                    td.textContent = row[header];
+
+                                }
+                                else if (this.fieldTypeMap[header] == 'DATE') {
+
+                                    if (row[header] !== null) {
+                                        const date = new Date(row[header]);
+                                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                        td.textContent = formattedDate;
+
+                                    }
+                                    else {
+                                        td.textContent = row[header];
+                                    }
+
+
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header];
+                                }
+                                else if (this.fieldTypeMap[header] == 'DATETIME') {
+
+                                    if (row[header] !== null) {
+                                        const date = new Date(row[header]);
+
+                                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                        let hours = date.getHours();
+
+                                        const minutes = date.getMinutes().toString().padStart(2, '0');
+                                        const ampm = hours >= 12 ? 'PM' : 'AM';
+                                        hours = hours % 12;
+                                        hours = hours ? hours : 12;
+                                        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                                        const formattedDateTime = `${formattedDate} ${formattedTime}`;
+                                        td.textContent = formattedDateTime;
+
+                                    }
+                                    else {
+                                        td.textContent = row[header];
+                                    }
+
+
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header];
+                                }
+                                else if (this.fieldTypeMap[header] == 'TEXTAREA') {
+
+                                    if (row[header] == null) {
+                                        td.innerHTML = '';
+                                    }
+                                    else {
+                                        if (row[header].includes('<')) {
+                                            td.innerHTML = row[header];
+                                        }
+                                        else {
+                                            td.textContent = row[header];
+
+                                        }
+                                    }
+
+
+
+
+                                }
+                                else {
+                                    input.value = row[header] == undefined ? '' : row[header];
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header];
+                                }
                             }
                         }
                         else {
@@ -495,7 +603,7 @@ export default class DynamicDataTable extends LightningElement {
                     else {
                         td.textContent = row[header] == undefined ? '' : row[header];
                     }
-                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name') {
+                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA')) {
                         td.appendChild(input);
                     }
                     if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
@@ -530,6 +638,7 @@ export default class DynamicDataTable extends LightningElement {
         if (this.visibleData.length > 0 && this.filteredData.length > 0) {
             this.toggleIdColumn = !this.toggleIdColumn;
             this.showSubmit = false;
+            this.editedIds = [];
             this.isIdColumnVisible = !this.isIdColumnVisible;
 
             if (this.toggleIdColumn == false) {
@@ -548,6 +657,7 @@ export default class DynamicDataTable extends LightningElement {
         else {
             this.toggleIdColumn = !this.toggleIdColumn;
             this.showSubmit = false;
+            this.editedIds = [];
             this.isIdColumnVisible = !this.isIdColumnVisible;
             if (this.toggleIdColumn == false) {
                 this.tableHeaders = this.tableHeaders.filter(header => !this.tableHeaderToRemove.includes(header));
@@ -577,6 +687,7 @@ export default class DynamicDataTable extends LightningElement {
                 this.scrolled = true;
                 if (this.enableInfiniteLoading) {
                     this.showSubmit = false;
+                    this.editedIds = [];
                     const allArrowIcons = this.template.querySelectorAll('lightning-icon');
                     allArrowIcons.forEach(icon => {
                         icon.classList.remove('arrowIconShow');
@@ -605,6 +716,7 @@ export default class DynamicDataTable extends LightningElement {
     handleSort(event) {
         if (this.dataToSort.length > 0) {
             this.showSubmit = false;
+            this.editedIds = [];
             this.selectedHeaderId = event.currentTarget.dataset.id;
             this.activeHeader = this.selectedHeaderId;
             this.sortedBy = event.currentTarget.dataset.id;
@@ -723,6 +835,7 @@ export default class DynamicDataTable extends LightningElement {
     // Handle the start of a drag event for column header
     handleDragStart(event) {
         this.showSubmit = false;
+        this.editedIds = [];
         event.dataTransfer.setData('text', event.target.dataset.index);
         const inputField = this.template.querySelector('lightning-input');
         inputField.value = '';
@@ -765,6 +878,7 @@ export default class DynamicDataTable extends LightningElement {
         });
         this.showInput = false;
         this.showSubmit = false;
+        this.editedIds = [];
         var inputText = event.target.value;
         this.visibleData = this.searchTable(inputText);
         this.globalSearchCloseFilterData = this.searchTable(inputText);
@@ -887,6 +1001,7 @@ export default class DynamicDataTable extends LightningElement {
                 input.style.border = 'none';
                 input.style.width = 'auto';
                 const td = document.createElement('td');
+                td.dataset.type = this.fieldTypeMap[header];
 
                 if (this.soql) {
                     if (this.inlineEditing) {
@@ -919,7 +1034,83 @@ export default class DynamicDataTable extends LightningElement {
                             td.textContent = row[header] == undefined ? '' : row[header];
                         }
                         else {
-                            input.value = row[header] == undefined ? '' : row[header];
+                            if (this.fieldTypeMap[header] == 'BOOLEAN' && this.isUpdatableMap[header]) {
+                                td.textContent = row[header];
+                                td.dataset.header = header;
+
+
+                            }
+                            else if (this.fieldTypeMap[header] == 'PICKLIST') {
+                                td.dataset.value = row[header];
+                                td.dataset.header = header;
+                                td.textContent = row[header];
+                            }
+
+                            else if (this.fieldTypeMap[header] == 'DATE') {
+
+                                if (row[header] !== null) {
+                                    const date = new Date(row[header]);
+                                    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                    td.textContent = formattedDate;
+
+                                }
+                                else {
+                                    td.textContent = row[header];
+                                }
+
+
+                                td.dataset.header = header;
+                                td.dataset.value = row[header];
+                            }
+                            else if (this.fieldTypeMap[header] == 'DATETIME') {
+
+                                if (row[header] !== null) {
+                                    const date = new Date(row[header]);
+
+                                    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                    let hours = date.getHours();
+
+                                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                                    hours = hours % 12;
+                                    hours = hours ? hours : 12;
+                                    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                                    const formattedDateTime = `${formattedDate} ${formattedTime}`;
+                                    td.textContent = formattedDateTime;
+
+                                }
+                                else {
+                                    td.textContent = row[header];
+                                }
+
+
+                                td.dataset.header = header;
+                                td.dataset.value = row[header];
+                            }
+                            else if (this.fieldTypeMap[header] == 'TEXTAREA') {
+
+                                if (row[header] == null) {
+                                    td.innerHTML = '';
+                                }
+                                else {
+                                    if (row[header].includes('<')) {
+                                        td.innerHTML = row[header];
+                                    }
+                                    else {
+                                        td.textContent = row[header];
+
+                                    }
+                                }
+
+
+
+
+                            }
+
+
+                            else {
+                                input.value = row[header] == undefined ? '' : row[header];
+                            }
                         }
                     }
                     else {
@@ -973,7 +1164,7 @@ export default class DynamicDataTable extends LightningElement {
                 }
 
 
-                if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name') {
+                if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA')) {
                     td.appendChild(input);
                 }
                 if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
@@ -1061,6 +1252,7 @@ export default class DynamicDataTable extends LightningElement {
         });
         this.showInput = false;
         this.showSubmit = false;
+        this.editedIds = [];
         this.filteredData = [];
         this.populateTableBody();
     }
@@ -1150,5 +1342,611 @@ export default class DynamicDataTable extends LightningElement {
             }
         }
     }
+
+    handleGoNext() {
+        this.submitData();
+
+    }
+
+
+    async handleDoubleClick(event) {
+
+        const target = event.target;
+        // Handling double-click on BOOLEAN cells
+        if (target.tagName === 'TD' && target.dataset.type === 'BOOLEAN' && this.isUpdatableMap[target.dataset.header]) {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = target.textContent.trim().toLowerCase() === 'true';
+            const currentValue = target.textContent.trim().toLowerCase() === 'true';
+
+            checkbox.addEventListener('change', (event) => {
+                target.dataset.value = event.target.checked;
+                target.dataset.edited = "true";
+                if (event.target.checked == currentValue) {
+                    target.textContent = currentValue;
+                    target.dataset.edited = "false";
+                }
+                const tr = target.closest('tr');
+                let isAnyFieldEdited = false;
+                tr.querySelectorAll('td').forEach(td => {
+                    if (td.dataset.edited === "true") {
+                        isAnyFieldEdited = true;
+                    }
+                });
+                const hiddenIdCell = tr.querySelector('td:first-child');
+                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                if (hiddenId) {
+                    if (!this.editedIds.includes(hiddenId.value)) {
+                        this.editedIds.push(hiddenId.value);
+                        this.showSubmit = true;
+                        this.stopColumnRender = true;
+                    }
+                    else if (event.target.checked === currentValue && !isAnyFieldEdited) {
+                        let index = this.editedIds.indexOf(hiddenId.value);
+                        if (index !== -1) {
+                            this.editedIds.splice(index, 1);
+                        }
+                        if (this.editedIds.length == 0) {
+                            this.showSubmit = false;
+                        }
+                    }
+                }
+            });
+
+              // Event listener for outside click to revert changes if necessary
+            document.addEventListener('click', function handleOutsideClick(event) {
+                if (!checkbox.contains(event.target) && !target.contains(event.target)) {
+                    if (checkbox.checked == currentValue) {
+                        target.textContent = currentValue;
+                    }
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            });
+            target.innerHTML = '';
+            target.appendChild(checkbox);
+        }
+           // Handling double-click on PICKLIST cells
+        else if (target.tagName === 'TD' && target.dataset.type === 'PICKLIST') {
+            let currentValue = target.dataset.value;
+            const headerValue = target.dataset.header;
+            let pickListOptions = await getPicklistValue({ query: this.soql, field: headerValue });
+            const select = document.createElement('select');
+            let originalOptions = pickListOptions;
+            let options = [...originalOptions];
+
+            if (currentValue == 'null') {
+                currentValue = '--None--';
+            }
+
+            if (!options.includes('--None--')) {
+                options.unshift('--None--');
+            }
+
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                if (option === currentValue) {
+                    optionElement.selected = true;
+                }
+                select.appendChild(optionElement);
+            });
+            // Event listener for select change
+            select.addEventListener('change', (event) => {
+                target.dataset.value = event.target.value;
+                const selectedValue = event.target.value;
+                target.dataset.edited = "true";
+
+                if (selectedValue === '--None--' && currentValue === '--None--') {
+
+                    target.textContent = '';
+                    target.dataset.edited = "false";
+                }
+                else if (event.target.value == currentValue && currentValue != '--None--') {
+                    target.textContent = event.target.value;
+                    target.dataset.edited = "false";
+                    target.style.border = '';
+
+                }
+                this.pickListChange = target.dataset.edited;
+                const tr = target.closest('tr');
+                const hiddenIdCell = tr.querySelector('td:first-child');
+                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                let isAnyFieldEdited = false;
+                tr.querySelectorAll('td').forEach(td => {
+                    if (td.dataset.edited === "true") {
+                        isAnyFieldEdited = true;
+                    }
+                });
+
+                if (hiddenId) {
+                    try {
+                        if (!this.editedIds.includes(hiddenId.value)) {
+                            this.editedIds.push(hiddenId.value);
+                            this.showSubmit = true;
+                            this.stopColumnRender = true;
+                        }
+                        else if (event.target.value == currentValue && !isAnyFieldEdited) {
+                            let index = this.editedIds.indexOf(hiddenId.value);
+                            if (index !== -1) {
+                                this.editedIds.splice(index, 1);
+                            }
+                            if (this.editedIds.length == 0) {
+                                this.showSubmit = false;
+                            }
+                        }
+                    } catch (error) {
+                    }
+                }
+            });
+            const self = this;
+             // Event listener for outside click to revert changes if necessary
+            document.addEventListener('click', function handleOutsideClick(event) {
+                if (!select.contains(event.target) && !target.contains(event.target)) {
+                    if (!self.requiredFieldMap[headerValue]) {
+                        if (select.value === currentValue) {
+                            if (select.value == '--None--' && currentValue == '--None--') {
+                                target.textContent = '';
+                            } else {
+                                target.textContent = currentValue;
+                            }
+                        }
+                    }
+                    else {
+                        if (select.value === currentValue) {
+                            if (select.value == '--None--' && currentValue == '--None--') {
+                                target.textContent = '';
+                            } else {
+                                target.textContent = currentValue;
+                                target.style.border = '';
+                            }
+                        }
+                    }
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            });
+            target.textContent = '';
+            target.appendChild(select);
+        }
+         // Handling double-click on DATE cells
+        else if (target.tagName === 'TD' && target.dataset.type === 'DATE') {
+            const input = document.createElement('input');
+            input.type = 'date';
+            let currentDate = target.textContent.trim();
+            if (currentDate) {
+                const [month, day, year] = currentDate.split('/');
+                currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+
+            input.value = currentDate;
+            input.style.width = '100%';
+            const currentValue = target.textContent.trim()
+
+            input.addEventListener('change', (event) => {
+                target.dataset.value = event.target.value;
+                target.dataset.edited = "true";
+                if (event.target.value == currentDate) {
+                    target.textContent = currentValue;
+                    target.dataset.edited = "false";
+                }
+                const tr = target.closest('tr');
+                let isAnyFieldEdited = false;
+                tr.querySelectorAll('td').forEach(td => {
+                    if (td.dataset.edited === "true") {
+                        isAnyFieldEdited = true;
+                    }
+                });
+                const hiddenIdCell = tr.querySelector('td:first-child');
+                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                if (hiddenId) {
+                    if (!this.editedIds.includes(hiddenId.value)) {
+                        this.editedIds.push(hiddenId.value);
+                        this.showSubmit = true;
+                        this.stopColumnRender = true;
+                    }
+                    else if (event.target.value == currentDate && !isAnyFieldEdited) {
+                        let index = this.editedIds.indexOf(hiddenId.value);
+                        if (index !== -1) {
+                            this.editedIds.splice(index, 1);
+                        }
+                        if (this.editedIds.length == 0) {
+                            this.showSubmit = false;
+                        }
+                    }
+                }
+            });
+            // Event listener for outside click to revert changes if necessary
+            document.addEventListener('click', function handleOutsideClick(event) {
+                if (!input.contains(event.target) && !target.contains(event.target)) {
+                    let conInputDate = input.value;
+                    if (conInputDate) {
+                        const [year, month, day] = conInputDate.split('-');
+                        conInputDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year}`;
+                    }
+                    if (conInputDate == currentValue) {
+                        target.textContent = currentValue;
+                    }
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            });
+            target.textContent = '';
+            target.appendChild(input);
+        }
+         // Handling double-click on DATETIME cells
+        else if (target.tagName === 'TD' && target.dataset.type === 'DATETIME') {
+
+            const input = document.createElement('input');
+            input.type = 'datetime-local';
+            let currentDate = target.textContent.trim();
+
+            if (currentDate) {
+                const [datePart, timePart, period] = currentDate.split(' ');
+                const [month, day, year] = datePart.split('/');
+                let [hours, minutes] = timePart.split(':');
+                if (period === 'PM' && hours !== '12') {
+                    hours = parseInt(hours, 10) + 12;
+                } else if (period === 'AM' && hours === '12') {
+                    hours = '00';
+                }
+                currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes.padStart(2, '0')}`;
+            }
+
+            input.value = currentDate;
+            input.style.width = '100%';
+            const currentValue = target.textContent.trim()
+            // Event listener for datetime input change
+            input.addEventListener('change', (event) => {
+                target.dataset.value = event.target.value;
+                target.dataset.edited = "true";
+                if (event.target.value == currentDate) {
+                    target.textContent = currentValue;
+                    target.dataset.edited = "false";
+                }
+                const tr = target.closest('tr');
+
+                let isAnyFieldEdited = false;
+                tr.querySelectorAll('td').forEach(td => {
+                    if (td.dataset.edited === "true") {
+                        isAnyFieldEdited = true;
+                    }
+                });
+
+                const hiddenIdCell = tr.querySelector('td:first-child');
+                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                if (hiddenId) {
+                    if (!this.editedIds.includes(hiddenId.value)) {
+                        this.editedIds.push(hiddenId.value);
+                        this.showSubmit = true;
+                        this.stopColumnRender = true;
+                    }
+                    else if (event.target.value == currentDate && !isAnyFieldEdited) {
+                        let index = this.editedIds.indexOf(hiddenId.value);
+                        if (index !== -1) {
+                            this.editedIds.splice(index, 1);
+                        }
+                        if (this.editedIds.length == 0) {
+                            this.showSubmit = false;
+                        }
+                    }
+                }
+            });
+
+              // Event listener for outside click to revert changes if necessary
+            document.addEventListener('click', function handleOutsideClick(event) {
+
+                if (!input.contains(event.target) && !target.contains(event.target)) {
+                    let conInputDate = input.value;
+                    if (conInputDate) {
+                        const dateParts = conInputDate.split('T');
+                        const [year, month, day] = dateParts[0].split('-');
+                        const timeParts = dateParts[1].split(':');
+                        let hours = parseInt(timeParts[0], 10);
+                        const minutes = timeParts[1];
+                        const ampm = hours >= 12 ? 'PM' : 'AM';
+                        hours = hours % 12;
+                        hours = hours ? hours : 12;
+                        conInputDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year} ${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+
+                    }
+                    if (conInputDate == currentValue) {
+                        target.textContent = currentValue;
+                    }
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            });
+
+            target.textContent = '';
+            target.appendChild(input);
+        }
+        // Handling double-click on text input fields
+        else if (target.tagName === 'INPUT') {
+            const tdout = target.closest('td');
+            let currentValue = tdout.dataset.value;
+            target.readOnly = false;
+            target.style.border = '1px solid black';
+
+             // Event listener for keyup event to handle text input change
+            this.handleKeyup = (event) => {
+                const tdin = target.closest('td');
+                target.style.backgroundColor = '#FAFAD2';
+                target.dataset.edited = "true";
+                tdin.dataset.edited = "true";
+                if (event.target.value === currentValue) {
+                    target.style.backgroundColor = '';
+                    tdin.dataset.edited = "false";
+                    target.dataset.edited = "false";
+                }
+
+
+                const tr = target.closest('tr');
+                let isAnyFieldEdited = false;
+                tr.querySelectorAll('td').forEach(td => {
+                    if (td.dataset.edited === "true") {
+                        isAnyFieldEdited = true;
+                    }
+                });
+
+                const td = tr.querySelector('td:first-child');
+                const hiddenId = td.querySelector('input[type="hidden"]');
+                if (hiddenId) {
+
+                    try {
+                        if (!this.editedIds.includes(hiddenId.value)) {
+                            this.editedIds.push(hiddenId.value);
+                            this.showSubmit = true;
+                            this.stopColumnRender = true;
+                        }
+                        else if (event.target.value == currentValue && !isAnyFieldEdited) {
+                            let index = this.editedIds.indexOf(hiddenId.value);
+                            if (index !== -1) {
+                                this.editedIds.splice(index, 1);
+                            }
+                            if (this.editedIds.length == 0) {
+                                this.showSubmit = false;
+                            }
+                        }
+                    }
+                    catch (error) {
+                    }
+                }
+            };
+             // Event listener for blur event to handle text input blur
+            this.handleBlur = (event) => {
+
+                if (event.target.value == currentValue) {
+                    target.readOnly = true;
+                    target.style.border = 'none';
+                }
+                target.readOnly = true;
+                target.style.border = 'none';
+                target.removeEventListener('keyup', this.handleKeyup);
+            }
+            // Adding the event listener
+            target.removeEventListener('blur', this.handleBlur);
+            target.addEventListener('blur', this.handleBlur);
+            target.addEventListener('keyup', this.handleKeyup);
+
+        }
+        else if (target.tagName === 'TD') {
+            const td = target.querySelector('td');
+        }
+    }
+
+
+    async submitData() {
+        if (this.editedIds.length > 0) {
+            const checkedIds = [];
+            const jsonData = [];
+            let hasError = false;
+
+             // Regular expression and function to validate email format
+            const emailRegex = /^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+            function validateEmail(email) {
+                return emailRegex.test(email);
+            }
+
+            // Iterate over each table row to get edited data
+            this.template.querySelectorAll('tr').forEach(tr1 => {
+                const editedRow = {};
+                let idFound = false;
+                const firstTd = tr1.querySelector('td:first-child');
+
+                if (firstTd) {
+                    const hiddenCol = firstTd.querySelector('input[type="hidden"]');
+                    const tr = hiddenCol.closest('tr');
+                    const tds = tr.querySelectorAll('td');
+                    tds.forEach((td, index) => {
+                        const input = td.querySelector('input[type="text"]');
+                        const inputeditted = td.querySelector(' input[data-edited="true"]');
+                        const select = td.querySelector('select');
+
+                        // Validate required fields
+                        if (this.editedIds.includes(hiddenCol.value) && this.requiredFieldMap[td.dataset.header]) {
+                            let value;
+                            if (td.dataset.type === "STRING") {
+                                if (input) {
+                                    value = input.value;
+                                    if (value == '') {
+                                        td.style.border = '2px solid red';
+                                        this.errorToastMessage = true;
+                                        this.errorMsg = 'Please enter a value in required field.';
+                                        hasError = true;
+                                    }
+                                }
+                            }
+                            else if (td.dataset.type === 'PICKLIST') {
+                                const tdValue = td.textContent;
+                                if (select) {
+                                    value = select.value;
+                                }
+                                if (tdValue == '' || value == '--None--') {
+                                    td.style.border = '2px solid red';
+                                    this.errorToastMessage = true;
+                                    this.errorMsg = 'Please enter a value in required field.';
+                                    hasError = true;
+                                }
+                            }
+                            else if (td.dataset.type === 'DATE') {
+                                if (td.dataset.value == "null") {
+                                    td.style.border = '2px solid red';
+                                    this.errorToastMessage = true;
+                                    this.errorMsg = 'Please enter a value in required field.';
+                                    hasError = true;
+                                }
+                            }
+                            else if (td.dataset.type === 'DATETIME') {
+                                if (td.dataset.value == "null") {
+                                    td.style.border = '2px solid red';
+                                    this.errorToastMessage = true;
+                                    this.errorMsg = 'Please enter a value in required field.';
+                                    hasError = true;
+                                }
+                            }
+                        }
+
+                        // Collect edited data
+                        if ((input && input.dataset.edited == 'true') || (select && td.dataset.edited === "true") || (td.dataset.type === 'DATE' && td.dataset.edited === 'true') || (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') || (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true')) {
+                            editedRow['Id'] = hiddenCol.value;
+                            const td2 = tr1.querySelector('td:nth-child(2)');
+                            if (td2) {
+                                const checkbox = td2.querySelector('input[type="checkbox"]');
+                                if (checkbox) {
+                                    const header = this.tableHeaders[index - 2];
+                                    if (this.fieldTypeMap[header] !== 'PICKLIST') {
+                                        if (this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value)) {
+                                            input.style.border = '2px solid red';
+                                            this.errorToastMessage = true;
+                                            this.errorMsg = 'Please enter a valid email address in the correct format (e.g., user@example.com).';
+                                            hasError = true;
+                                            return;
+                                        }
+                                        editedRow[header] = input.value;
+                                    }
+                                    else if (select) {
+                                        editedRow[header] = select.value;
+                                    }
+                                    else if (td.dataset.type === 'DATE' && td.dataset.edited === 'true') {
+                                        if (this.editedIds.includes(hiddenCol.value)) {
+                                            editedRow[header] = td.dataset.value;
+                                        }
+                                    }
+                                    else if (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') {
+                                        if (this.editedIds.includes(hiddenCol.value)) {
+                                            editedRow[header] = td.dataset.value;
+                                        }
+                                    }
+                                    else if (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true') {
+                                        editedRow[header] = td.dataset.value;
+                                    }
+                                }
+                                else if (select) {
+                                    const header = this.tableHeaders[index - 1];
+                                    editedRow[header] = select.value;
+                                }
+                                else if (td.dataset.type === 'DATE' && td.dataset.edited === 'true') {
+                                    const header = this.tableHeaders[index - 1];
+                                    editedRow[header] = td.dataset.value;
+                                }
+                                else if (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') {
+                                    const header = this.tableHeaders[index - 1];
+                                    editedRow[header] = td.dataset.value;
+                                }
+                                else if (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true') {
+                                    const header = this.tableHeaders[index - 1];
+                                    editedRow[header] = td.dataset.value;
+                                }
+                                else {
+                                    const header = this.tableHeaders[index - 1];
+                                    if (this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value)) {
+                                        input.style.border = '2px solid red';
+                                        this.errorToastMessage = true;
+                                        this.errorMsg = 'Please enter a valid email address in the correct format (e.g., user@example.com).';
+                                        hasError = true;
+                                        return;
+                                    }
+                                    editedRow[header] = input.value;
+                                }
+                            }
+                            else {
+                                const header = this.tableHeaders[index - 1];
+                                if (this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value)) {
+                                    this.errorToastMessage = true;
+                                    this.errorMsg = 'Please enter a valid email address in the correct format (e.g., user@example.com).';
+                                    hasError = true;
+                                    return;
+                                }
+                                editedRow[header] = input.value;
+                            }
+                        }
+                    });
+
+                     // Add the edited row to jsonData 
+                    if (editedRow && Object.keys(editedRow).length > 0) {
+                        jsonData.push(editedRow);
+                    }
+                }
+            });
+
+             // If there are validation errors, exit the function
+            if (hasError) {
+                return;
+            }
+
+             // Update the SObject with the collected data
+            await updateSObject({ jsonData: JSON.stringify(jsonData) })
+                .then(result => {
+                    if (result.startsWith('Record')) {
+                        this.successToastMessage = true;
+                        this.successMsg = result;
+                        jsonData.forEach((editedEntry) => {
+                            const idToUpdate = editedEntry.Id;
+                            this.globalData = this.globalData.map((entry) => {
+                                if (entry.Id === idToUpdate) {
+                                    const updatedEntry = { ...entry, ...editedEntry };
+                                    for (let key in updatedEntry) {
+                                        if (updatedEntry[key] === '--None--') {
+                                            updatedEntry[key] = '';
+                                        }
+                                    }
+                                    return updatedEntry;
+                                }
+                                return entry;
+                            });
+                        });
+                    }
+                    else {
+                        this.errorToastMessage = true;
+                        this.errorMsg = result;
+                    }
+                })
+
+            // Reset editedIds and update the table display
+            this.editedIds = [];
+            this.showSubmit = false;
+            this.populateTableBody();
+
+        }
+
+    }
+
+    handleCancel() {
+        // Reset the table data
+        if (this.editedIds.length > 0) {
+            this.populateTableBody();
+            this.editedIds = [];
+        }
+        this.showSubmit = false;
+    }
+
+    handleClose() {
+        // Close the Success toast message 
+        this.successToastMessage = false;
+    }
+
+    handleErrorClose() {
+        // Close the Error toast message 
+        this.errorToastMessage = false;
+    }
+
 
 }
