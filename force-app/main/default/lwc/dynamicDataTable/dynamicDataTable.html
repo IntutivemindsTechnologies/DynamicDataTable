@@ -64,6 +64,55 @@
                     <div class="slds-card__body slds-card__body_inner">{totalRecords} items<b>.</b> Updated few seconds
                         ago
 
+
+                        <div class="slds-media__body">
+
+                            <div class="slds-notify_container slds-is-relative" if:true={successToastMessage}>
+                                <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+                                    <span class="slds-assistive-text">success</span>
+                                    <span
+                                        class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top"
+                                        title="Description of icon when needed">
+
+                                        <lightning-icon icon-name="utility:check" size="xx-small"
+                                            variant="inverse"></lightning-icon>
+                                    </span>
+                                    <div class="slds-notify__content">
+                                        <h2 class="slds-text-heading_small ">{successMsg}</h2>
+                                    </div>
+                                    <div class="slds-notify__close">
+                                        <lightning-icon icon-name="utility:close" alternative-text="Close"
+                                            title="Close" size="xx-small" onclick={handleClose}
+                                            variant="inverse"></lightning-icon>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="slds-notify_container slds-is-relative" if:true={errorToastMessage}>
+                                <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+                                    <span class="slds-assistive-text">error</span>
+                                    <span
+                                        class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top"
+                                        title="Description of icon when needed">
+
+                                        <lightning-icon icon-name="utility:error" size="xx-small"
+                                            variant="inverse"></lightning-icon>
+                                    </span>
+                                    <div class="slds-notify__content">
+                                        <h2 class="slds-text-heading_small ">{errorMsg}</h2>
+                                    </div>
+                                    <div class="slds-notify__close">
+                                        <lightning-icon icon-name="utility:close" alternative-text="Close"
+                                            title="Close" size="xx-small" onclick={handleErrorClose}
+                                            variant="inverse"></lightning-icon>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
                         <lightning-input type="search" placeholder="Search the list..." onkeyup={handleKeyUp}
                             oncommit={handleCross} data-id="searchInput"></lightning-input>
                         <h3 class="error-text"></h3>
@@ -175,6 +224,12 @@
 
                         <div class="slds-col slds-size_1-of-6 slds-p-top_x-small slds-grid slds-align_absolute-center">
 
+                            <template if:true={showSubmit}>
+                                <lightning-button label="Cancel" onclick={handleCancel}
+                                    class="slds-m-left_x-small"></lightning-button>
+                                <lightning-button label="Save" onclick={handleGoNext} class="slds-m-left_x-small"
+                                    variant="brand"></lightning-button>
+                            </template>
                         </div>
 
                     </footer>

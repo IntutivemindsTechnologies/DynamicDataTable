@@ -5,6 +5,12 @@ import getUpdateStatus from '@salesforce/apex/DynamicDataTableHandler.getUpdateS
 import getList from '@salesforce/apex/DynamicDataTableHandler.getDataFromQuery';
 import getObjectLabelName from '@salesforce/apex/DynamicDataTableHandler.getObjectLabelName';
 import iconNamesForObjects from '@salesforce/apex/DynamicDataTableHandler.iconNamesForObjects';
+import updateSObject from '@salesforce/apex/DynamicDataTableHandler.updateSObject';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import getMapofTypeForFields from '@salesforce/apex/DynamicDataTableHandler.getMapofTypeForFields';
+import getPicklistValue from '@salesforce/apex/DynamicDataTableHandler.getPicklistValue';
+import getMapofRequiredField from '@salesforce/apex/DynamicDataTableHandler.getMapofRequiredField';
+
 
 export default class DynamicDataTable extends LightningElement {
 
@@ -47,7 +53,7 @@ export default class DynamicDataTable extends LightningElement {
     iconName;
     @api showReferenceToggle = false;
     @api globalSearchResult = [];
-    inlineEditing = false;
+    @api inlineEditing = false;
     @track activeHeader = null;
     @track showNoDataMessage;
     @track showHeaderName;
@@ -59,6 +65,16 @@ export default class DynamicDataTable extends LightningElement {
     @api checkForFilteredList;
     @api checkBoxVisibile = false;
     @api showtoggle = false;
+    @api editedIds=[];
+    @api fieldTypeMap={};
+    @api requiredFieldMap={};
+    @api pickListChange=false;
+    @api handleKeyup=null;
+    @api handleBlur=null;
+     successToastMessage;
+     errorToastMessage;
+  
+
 
 
     connectedCallback() {
@@ -138,6 +154,9 @@ export default class DynamicDataTable extends LightningElement {
 
     // Fetches SOQL data and processes it
     getSoqlData() {
+
+
+
         //Function to check if a value is a valid ID
         function isIds(value) {
             return typeof value === 'string' && /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/.test(value);
@@ -181,6 +200,14 @@ export default class DynamicDataTable extends LightningElement {
             .then(async result => {
                 this.tableData = JSON.parse(result);
 
+
+                this.fieldTypeMap=await getMapofTypeForFields({query:this.soql});
+                 console.log('field Map  :',this.fieldTypeMap);
+
+                 this.requiredFieldMap=await getMapofRequiredField({query:this.soql});
+                 console.log('Required field Map  :',this.requiredFieldMap);
+
+
                 if (this.tableData.length === 0 && this.globalData.length === 0) {
                     this.tableData = false;
                     this.showNoDataMessage = true;
@@ -203,6 +230,7 @@ export default class DynamicDataTable extends LightningElement {
                     }
 
                     if (this.toggleIdColumn == true && this.showtoggle == true) {
+
                         for (const entry of this.tableData) {
                             for (const header of Object.keys(entry)) {
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
@@ -255,6 +283,7 @@ export default class DynamicDataTable extends LightningElement {
                         }
                     }
                     else if (this.toggleIdColumn == true && this.showtoggle == false) {
+
                         for (const entry of this.tableData) {
                             for (const header of Object.keys(entry)) {
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
@@ -402,6 +431,7 @@ export default class DynamicDataTable extends LightningElement {
                     tr.appendChild(checkboxCell);
                 }
 
+                console.log('table header :'+this.tableHeaders);
                 this.tableHeaders.forEach((header, index) => {
                     const input = document.createElement('input');
                     input.type = 'text';
@@ -409,6 +439,8 @@ export default class DynamicDataTable extends LightningElement {
                     input.style.border = 'none';
                     input.style.width = 'auto';
                     const td = document.createElement('td');
+                    td.dataset.type = this.fieldTypeMap[header];
+                   
 
                     if (this.soql) {
                         if (this.inlineEditing) {
@@ -442,7 +474,85 @@ export default class DynamicDataTable extends LightningElement {
                                 td.textContent = row[header] == undefined ? '' : row[header];
                             }
                             else {
+                                if(this.fieldTypeMap[header]=='BOOLEAN' && this.isUpdatableMap[header]){
+                                    td.textContent = row[header] ;
+                                    td.dataset.header=header;
+
+
+                                }
+                                else if (this.fieldTypeMap[header]== 'PICKLIST') {
+                                td.dataset.value = row[header];
+                                td.dataset.header=header;
+                                td.textContent = row[header];
+                               
+                            }
+                            else if(this.fieldTypeMap[header]== 'DATE'){
+                              
+                                if(row[header] !==null){
+                                const date = new Date(row[header]);
+                                const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                td.textContent = formattedDate;
+                                console.log('row[header] date :',row[header]);
+                                console.log('formatted date :',formattedDate);
+                                }
+                                else{
+                                td.textContent=row[header];
+                                }
+                              
+                               // td.textContent = row[header] ;
+                                td.dataset.header=header;
+                                td.dataset.value = row[header];
+                            }
+                            else if(this.fieldTypeMap[header]== 'DATETIME'){
+                              
+                                if(row[header] !==null){
+                                    const date = new Date(row[header]);
+                                    console.log('date :',date);
+                                    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                    let hours = date.getHours();
+                                    console.log('hrs :',hours);
+                                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                                    hours = hours % 12;
+                                    hours = hours ? hours : 12; 
+                                    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                                    const formattedDateTime = `${formattedDate} ${formattedTime}`;
+                                    td.textContent = formattedDateTime;
+                                    console.log('row[header] date :', row[header]);
+                                    console.log('formatted date and time :', formattedDateTime);
+                                }
+                                else{
+                                td.textContent=row[header];
+                                }
+                              
+                               // td.textContent = row[header] ;
+                                td.dataset.header=header;
+                                td.dataset.value = row[header];
+                            }
+                            else if(this.fieldTypeMap[header]== 'TEXTAREA' ){
+                                console.log('row[header]1 :',row[header]);
+                                if(row[header]==null){
+                                    td.innerHTML='';
+                                }
+                                else{
+                                    if(row[header].includes('<')){
+                                        td.innerHTML=row[header];
+                                    }
+                                    else{
+                                        td.textContent=row[header];
+                                        
+                                    }
+                                }
+
+                               
+                                
+
+                            }
+                                else{
                                 input.value = row[header] == undefined ? '' : row[header];
+                                td.dataset.header=header;
+                                td.dataset.value = row[header];
+                                }
                             }
                         }
                         else {
@@ -495,7 +605,7 @@ export default class DynamicDataTable extends LightningElement {
                     else {
                         td.textContent = row[header] == undefined ? '' : row[header];
                     }
-                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name') {
+                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header]=='BOOLEAN' || this.fieldTypeMap[header]=='PICKLIST' || this.fieldTypeMap[header]=='DATE' || this.fieldTypeMap[header]=='DATETIME' || this.fieldTypeMap[header]=='TEXTAREA') ) {
                         td.appendChild(input);
                     }
                     if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
@@ -530,6 +640,7 @@ export default class DynamicDataTable extends LightningElement {
         if (this.visibleData.length > 0 && this.filteredData.length > 0) {
             this.toggleIdColumn = !this.toggleIdColumn;
             this.showSubmit = false;
+            this.editedIds=[];
             this.isIdColumnVisible = !this.isIdColumnVisible;
 
             if (this.toggleIdColumn == false) {
@@ -548,6 +659,7 @@ export default class DynamicDataTable extends LightningElement {
         else {
             this.toggleIdColumn = !this.toggleIdColumn;
             this.showSubmit = false;
+            this.editedIds=[];
             this.isIdColumnVisible = !this.isIdColumnVisible;
             if (this.toggleIdColumn == false) {
                 this.tableHeaders = this.tableHeaders.filter(header => !this.tableHeaderToRemove.includes(header));
@@ -577,6 +689,7 @@ export default class DynamicDataTable extends LightningElement {
                 this.scrolled = true;
                 if (this.enableInfiniteLoading) {
                     this.showSubmit = false;
+                    this.editedIds=[];
                     const allArrowIcons = this.template.querySelectorAll('lightning-icon');
                     allArrowIcons.forEach(icon => {
                         icon.classList.remove('arrowIconShow');
@@ -605,6 +718,7 @@ export default class DynamicDataTable extends LightningElement {
     handleSort(event) {
         if (this.dataToSort.length > 0) {
             this.showSubmit = false;
+            this.editedIds=[];
             this.selectedHeaderId = event.currentTarget.dataset.id;
             this.activeHeader = this.selectedHeaderId;
             this.sortedBy = event.currentTarget.dataset.id;
@@ -723,6 +837,7 @@ export default class DynamicDataTable extends LightningElement {
     // Handle the start of a drag event for column header
     handleDragStart(event) {
         this.showSubmit = false;
+        this.editedIds=[];
         event.dataTransfer.setData('text', event.target.dataset.index);
         const inputField = this.template.querySelector('lightning-input');
         inputField.value = '';
@@ -765,6 +880,7 @@ export default class DynamicDataTable extends LightningElement {
         });
         this.showInput = false;
         this.showSubmit = false;
+        this.editedIds=[];
         var inputText = event.target.value;
         this.visibleData = this.searchTable(inputText);
         this.globalSearchCloseFilterData = this.searchTable(inputText);
@@ -887,6 +1003,7 @@ export default class DynamicDataTable extends LightningElement {
                 input.style.border = 'none';
                 input.style.width = 'auto';
                 const td = document.createElement('td');
+                td.dataset.type = this.fieldTypeMap[header];
 
                 if (this.soql) {
                     if (this.inlineEditing) {
@@ -918,9 +1035,87 @@ export default class DynamicDataTable extends LightningElement {
                         else if ((!this.isUpdatableMap[header] && header !== 'Name') || (this.isUpdatableMap[header] && isId(row[header]) && header !== 'Name')) {
                             td.textContent = row[header] == undefined ? '' : row[header];
                         }
+                        else{
+                            if(this.fieldTypeMap[header]=='BOOLEAN' && this.isUpdatableMap[header]){
+                                td.textContent = row[header] ;
+                                td.dataset.header=header;
+
+
+                            }
+                        else if (this.fieldTypeMap[header]== 'PICKLIST') {
+                        td.dataset.value = row[header];
+                        td.dataset.header=header;
+                        td.textContent = row[header];
+                    }
+
+                    else if(this.fieldTypeMap[header]== 'DATE'){
+                              
+                        if(row[header] !==null){
+                        const date = new Date(row[header]);
+                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                        td.textContent = formattedDate;
+                        console.log('row[header] date :',row[header]);
+                        console.log('formatted date :',formattedDate);
+                        }
+                        else{
+                        td.textContent=row[header];
+                        }
+                      
+                       // td.textContent = row[header] ;
+                        td.dataset.header=header;
+                        td.dataset.value = row[header];
+                    }
+                    else if(this.fieldTypeMap[header]== 'DATETIME'){
+                      
+                        if(row[header] !==null){
+                            const date = new Date(row[header]);
+                            console.log('date :',date);
+                            const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                            let hours = date.getHours();
+                            console.log('hrs :',hours);
+                            const minutes = date.getMinutes().toString().padStart(2, '0');
+                            const ampm = hours >= 12 ? 'PM' : 'AM';
+                            hours = hours % 12;
+                            hours = hours ? hours : 12; 
+                            const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                            const formattedDateTime = `${formattedDate} ${formattedTime}`;
+                            td.textContent = formattedDateTime;
+                            console.log('row[header] date :', row[header]);
+                            console.log('formatted date and time :', formattedDateTime);
+                        }
+                        else{
+                        td.textContent=row[header];
+                        }
+                      
+                       // td.textContent = row[header] ;
+                        td.dataset.header=header;
+                        td.dataset.value = row[header];
+                    }
+                    else if(this.fieldTypeMap[header]== 'TEXTAREA' ){
+                        console.log('row[header]1 :',row[header]);
+                        if(row[header]==null){
+                            td.innerHTML='';
+                        }
+                        else{
+                            if(row[header].includes('<')){
+                                td.innerHTML=row[header];
+                            }
+                            else{
+                                td.textContent=row[header];
+                                
+                            }
+                        }
+
+                       
+                        
+
+                    }
+
+                    
                         else {
                             input.value = row[header] == undefined ? '' : row[header];
                         }
+                    }
                     }
                     else {
                         if (header.includes('.')) {
@@ -973,7 +1168,7 @@ export default class DynamicDataTable extends LightningElement {
                 }
 
 
-                if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name') {
+                if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header]=='BOOLEAN' || this.fieldTypeMap[header]=='PICKLIST' || this.fieldTypeMap[header]=='DATE' || this.fieldTypeMap[header]=='DATETIME' ||  this.fieldTypeMap[header]=='TEXTAREA')) {
                     td.appendChild(input);
                 }
                 if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
@@ -1061,6 +1256,7 @@ export default class DynamicDataTable extends LightningElement {
         });
         this.showInput = false;
         this.showSubmit = false;
+        this.editedIds=[];
         this.filteredData = [];
         this.populateTableBody();
     }
@@ -1150,5 +1346,1108 @@ export default class DynamicDataTable extends LightningElement {
             }
         }
     }
+
+
+
+
+       
+handleGoNext(){
+
+    this.submitData();
+  
+ }
+ 
+ 
+
+
+
+async handleDoubleClick(event) {
+    
+
+     const target = event.target;
+     console.log('target :',target);
+   
+     //let handleKeyup=null;
+    // let handleBlur=null;
+
+     
+     if (target.tagName === 'TD' && target.dataset.type === 'BOOLEAN' && this.isUpdatableMap[target.dataset.header]) {
+        console.log('boolean ');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = target.textContent.trim().toLowerCase() === 'true';
+        const currentValue= target.textContent.trim().toLowerCase() === 'true';
+        console.log('text :',target.textContent);
+        checkbox.addEventListener('change', (event) => {
+
+            console.log('value :',event.target.checked);
+            target.dataset.value=event.target.checked;
+            console.log('val is :', target.dataset.value);
+            target.dataset.edited="true";
+            
+            console.log('current value :',currentValue);
+           if(event.target.checked==currentValue){
+            target.textContent=currentValue;
+            target.dataset.edited="false";
+           }
+
+            const tr = target.closest('tr');
+            let isAnyFieldEdited = false;
+            tr.querySelectorAll('td').forEach(td => {
+
+                console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
+                if (td.dataset.edited === "true") {
+                    isAnyFieldEdited = true;
+                }
+            });
+            const hiddenIdCell = tr.querySelector('td:first-child');
+            const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+        
+            if (hiddenId) {
+                console.log('hiddenId  :', hiddenId.value);
+                  console.log('this.editedIds  :', this.editedIds);
+                  if (!this.editedIds.includes(hiddenId.value)) {
+                      this.editedIds.push(hiddenId.value);
+                            console.log('edited id inside1:', this.editedIds);
+                      this.showSubmit = true;
+                       this.stopColumnRender = true;
+                  }
+                  else if(event.target.checked===currentValue && !isAnyFieldEdited){
+                      console.log('this.editedIds 1 :', this.editedIds);
+                      let index=this.editedIds.indexOf(hiddenId.value);
+                      if(index !== -1){
+                          this.editedIds.splice(index,1);
+                      }
+                      console.log('this.editedIds  2:', this.editedIds);
+                      if(this.editedIds.length==0){
+                          this.showSubmit=false;
+                      }
+                  }
+              }
+
+        });
+
+        document.addEventListener('click', function handleOutsideClick(event) {
+            console.log('event Listner :', checkbox.checked+'  value current :',currentValue);
+           
+            if (!checkbox.contains(event.target) && !target.contains(event.target) ) {
+                console.log('clicked outside');
+
+                if(checkbox.checked==currentValue){
+                    target.textContent=currentValue;
+                }
+                // else{
+                //     target
+                // }
+
+                document.removeEventListener('click', handleOutsideClick);
+            }
+        });
+        target.innerHTML = '';
+        target.appendChild(checkbox);
+     
+    }
+    else if (target.tagName === 'TD' && target.dataset.type === 'PICKLIST') {
+       // if (target.dataset.type === 'PICKLIST') {
+       console.log('picklist');
+       console.log('edited :',target.dataset.inputEdited);
+            let currentValue = target.dataset.value;
+            const headerValue=target.dataset.header;
+            console.log('current value :'+currentValue);
+            console.log('header :',headerValue);
+            console.log('query :', this.soql);
+            let pickListOptions= await getPicklistValue({query:this.soql,field:headerValue});
+            console.log('picklist value',pickListOptions);
+              const select = document.createElement('select');
+              let originalOptions = pickListOptions; 
+             // options=['None'];
+           let options=[...originalOptions];
+           console.log('required val :',this.requiredFieldMap[headerValue]);
+          // if(!this.requiredFieldMap[headerValue]){
+           if(currentValue=='null'){
+            currentValue='--None--';
+           }
+//            console.log('res1  :',currentValue);
+//   console.log('res  :',currentValue!=='null');
+//               if (!options.includes(currentValue)  ) {
+//                   options.push(currentValue);
+//               }
+//               else{
+//                 options.push('None');
+//               }
+              if (!options.includes('--None--')) {
+        options.unshift('--None--');
+    }
+//}
+
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                // if(option=='--None--'){
+                //     optionElement.value = '';
+                //     optionElement.textContent = '--None--';
+                // }else{
+                optionElement.value = option;
+                optionElement.textContent = option;
+               // }
+               
+                console.log('option :'+option+'  current value :'+currentValue);
+                if (option === currentValue ) {
+                console.log('selected true');
+                    optionElement.selected = true;
+                }
+
+                select.appendChild(optionElement);
+            });
+
+            select.addEventListener('change', (event) => {
+                target.dataset.value = event.target.value;
+               const selectedValue = event.target.value;
+               target.dataset.edited="true";
+            //   target.closest('tr').dataset.inputEdited = true;
+                if (selectedValue === '--None--' && currentValue==='--None--') {
+                  
+                    target.textContent = ''; 
+                    target.dataset.edited="false";
+                } 
+              else if(event.target.value==currentValue && currentValue!='--None--'){
+                    target.textContent = event.target.value;
+                    target.dataset.edited="false";
+                    target.style.border='';
+                 //   target.closest('tr').dataset.inputEdited = false;
+                  //  this.editedIds=[];
+                }
+               // target.textContent = event.target.value;
+               console.log('target value :'+target.dataset.value );
+               console.log('target value2 :'+currentValue);
+               
+               this.pickListChange= target.dataset.edited;
+               console.log('picklist change',this.pickListChange);
+               
+                const tr = target.closest('tr');
+                const hiddenIdCell = tr.querySelector('td:first-child');
+                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                let isAnyFieldEdited = false;
+                tr.querySelectorAll('td').forEach(td => {
+
+                    console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
+                    if (td.dataset.edited === "true") {
+                        isAnyFieldEdited = true;
+                    }
+                });
+
+                if (hiddenId) {
+                    console.log('hiddenId  :', hiddenId.value);
+                    console.log('this.editedIds  :', this.editedIds);
+                    try {
+                        if (!this.editedIds.includes(hiddenId.value)) {
+                            this.editedIds.push(hiddenId.value);
+                            console.log('edited id inside1:', this.editedIds);
+                         // if(target.dataset.value !==currentValue){
+                            this.showSubmit = true;
+                            this.stopColumnRender = true;
+                         // }
+                        }
+                        else if(event.target.value==currentValue &&  !isAnyFieldEdited){    //&& !tr.dataset.inputEdited
+                            console.log('this.editedIds 1 :', this.editedIds);
+                            let index=this.editedIds.indexOf(hiddenId.value);
+                            if(index !== -1){
+                                this.editedIds.splice(index,1);
+                            }
+                            console.log('this.editedIds  2:', this.editedIds);
+                            if(this.editedIds.length==0){
+                                this.showSubmit=false;
+                            }
+                        }
+                    } catch (error) {
+                        console.log('err message ::', error.message);
+                    }
+                }
+              
+            });
+
+            // select.addEventListener('blur', (event) => {
+            //     console.log('selected value ::' + select.value + '  current value  :' + currentValue);
+            //     if (select.value === currentValue) {
+            //         if (select.value == '--None--' && currentValue == '--None--') {
+            //             target.textContent = '';
+            //         } else {
+            //             target.textContent = currentValue;
+            //         }
+            //     }
+            //   
+            // });
+            const self = this;
+            document.addEventListener('click', function handleOutsideClick(event) {
+                console.log('event Listner :',event.target);
+                console.log('select value : '+select.value);
+                console.log('current  value : '+currentValue);
+                console.log('header :',headerValue);
+                console.log('required val :',self.requiredFieldMap[headerValue]);
+                if (!select.contains(event.target) && !target.contains(event.target) ) {
+                   
+                    console.log('clicked outside');
+                    console.log('required val :',self.requiredFieldMap[headerValue]);
+                    if(!self.requiredFieldMap[headerValue]){
+                    if (select.value === currentValue) {
+                        if (select.value == '--None--' && currentValue == '--None--') {
+                            target.textContent = '';
+                        } else {
+                            target.textContent = currentValue;
+                            
+                           
+                        }
+                    }
+                }
+                else{
+                   
+                    console.log('required condi');
+
+                    console.log('select value : '+select.value);
+                    console.log('current  value : '+currentValue);
+                    if (select.value === currentValue) {
+                        if (select.value == '--None--' && currentValue == '--None--') {
+                            target.textContent = '';
+                        } else {
+                            target.textContent = currentValue;
+                            target.style.border = '';
+                        }
+                    }
+                    
+
+                }
+                  
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            });
+       
+
+            target.textContent = '';
+            target.appendChild(select);
+      
+       // }
+    }
+
+    else if(target.tagName === 'TD' && target.dataset.type === 'DATE'){
+    
+    console.log('date field');
+
+    			     //  if (!target.querySelector('input')) {
+                        const input = document.createElement('input');
+                        input.type = 'date';
+                      //  input.value = target.textContent.trim() || '';
+                      let currentDate = target.textContent.trim();
+
+                     
+                      if (currentDate) {
+                          const [month, day, year] = currentDate.split('/');
+                          currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                      }
+                  
+                      input.value = currentDate;
+
+
+                        input.style.width = '100%';
+                        const currentValue= target.textContent.trim()
+                        console.log('text content :',target.textContent.trim());
+                        console.log('text content :',input.value);
+            
+             input.addEventListener('change', (event) => {
+             console.log('date changed :'+event.target.value);
+                          //  target.textContent = input.value;
+                             target.dataset.value = event.target.value;
+                            target.dataset.edited = "true";
+
+                            if(event.target.value==currentDate){
+                                target.textContent = currentValue;
+                                target.dataset.edited = "false";
+                            }
+                            const tr = target.closest('tr');
+
+                            
+                            let isAnyFieldEdited = false;
+                            tr.querySelectorAll('td').forEach(td => {
+            
+                                console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
+                                if (td.dataset.edited === "true") {
+                                    isAnyFieldEdited = true;
+                                }
+                            });
+
+                            const hiddenIdCell = tr.querySelector('td:first-child');
+                            const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                            if (hiddenId) {
+                              console.log('hiddenId  :', hiddenId.value);
+                                console.log('this.editedIds  :', this.editedIds);
+                                if (!this.editedIds.includes(hiddenId.value)) {
+                                    this.editedIds.push(hiddenId.value);
+                                          console.log('edited id inside1:', this.editedIds);
+                                    this.showSubmit = true;
+                                     this.stopColumnRender = true;
+                                }
+                                else if(event.target.value==currentDate && !isAnyFieldEdited){
+                                    console.log('this.editedIds 1 :', this.editedIds);
+                                    let index=this.editedIds.indexOf(hiddenId.value);
+                                    if(index !== -1){
+                                        this.editedIds.splice(index,1);
+                                    }
+                                    console.log('this.editedIds  2:', this.editedIds);
+                                    if(this.editedIds.length==0){
+                                        this.showSubmit=false;
+                                    }
+                                }
+                            }
+                        });
+            
+                        console.log('ids  :',this.editedIds);
+                        console.log('value of input :',input.value);
+            // input.addEventListener('blur',(event)=> {
+            //     console.log('current date :',  input.value +'  changed dtae  :',event.target.value);
+            // })
+            
+
+            document.addEventListener('click', function handleOutsideClick(event) {
+                console.log('event Listner :',input.value+'  value current :',currentValue);
+               
+                if (!input.contains(event.target) && !target.contains(event.target) ) {
+                    console.log('clicked outside');
+
+                    let conInputDate=input.value;
+                    if(conInputDate){
+                        const[year,month,day]=conInputDate.split('-');
+                        conInputDate=`${month.padStart(2,'0')}/${day.padStart(2,'0')}/${year}`;
+                    }
+
+
+                    if (conInputDate == currentValue) {
+                        target.textContent = currentValue;
+                    } 
+                  
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            });
+            
+            
+            
+                          target.textContent = '';
+                        target.appendChild(input);
+            
+                        
+                      
+                      //  }
+    
+    }
+
+
+    else if(target.tagName === 'TD' && target.dataset.type === 'DATETIME'){
+    
+        console.log('date time field');
+    
+                         //  if (!target.querySelector('input')) {
+                            const input = document.createElement('input');
+                            input.type =  'datetime-local';
+                          //  input.value = target.textContent.trim() || '';
+                          let currentDate = target.textContent.trim();
+    
+                         
+                          if (currentDate) {
+                            const [datePart, timePart, period] = currentDate.split(' ');
+
+                            const [month, day, year] = datePart.split('/');
+                            let [hours, minutes] = timePart.split(':');
+                    
+                            if (period === 'PM' && hours !== '12') {
+                                hours = parseInt(hours, 10) + 12;
+                            } else if (period === 'AM' && hours === '12') {
+                                hours = '00';
+                            }
+                    
+                            currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes.padStart(2, '0')}`;
+                          }
+                      
+                          input.value = currentDate;
+    
+    
+                            input.style.width = '100%';
+                            const currentValue= target.textContent.trim()
+                            console.log('text content :',target.textContent.trim());
+                            console.log('text content :',input.value);
+                
+                 input.addEventListener('change', (event) => {
+                 console.log('date changed :'+event.target.value);
+                              //  target.textContent = input.value;
+                                 target.dataset.value = event.target.value;
+                                target.dataset.edited = "true";
+                                if(event.target.value==currentDate){
+                                    target.textContent = currentValue;
+                                    target.dataset.edited = "false";
+                                }
+                                const tr = target.closest('tr');
+
+                                let isAnyFieldEdited = false;
+                                tr.querySelectorAll('td').forEach(td => {
+                
+                                    console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
+                                    if (td.dataset.edited === "true") {
+                                        isAnyFieldEdited = true;
+                                    }
+                                });
+
+                                const hiddenIdCell = tr.querySelector('td:first-child');
+                                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                                if (hiddenId) {
+                                  console.log('hiddenId  :', hiddenId.value);
+                                    console.log('this.editedIds  :', this.editedIds);
+                                    if (!this.editedIds.includes(hiddenId.value)) {
+                                        this.editedIds.push(hiddenId.value);
+                                              console.log('edited id inside1:', this.editedIds);
+                                        this.showSubmit = true;
+                                         this.stopColumnRender = true;
+                                    }
+                                    else if(event.target.value==currentDate && !isAnyFieldEdited){
+                                        console.log('this.editedIds 1 :', this.editedIds);
+                                        let index=this.editedIds.indexOf(hiddenId.value);
+                                        if(index !== -1){
+                                            this.editedIds.splice(index,1);
+                                        }
+                                        console.log('this.editedIds  2:', this.editedIds);
+                                        if(this.editedIds.length==0){
+                                            this.showSubmit=false;
+                                        }
+                                    }
+                                }
+                            });
+                
+                            console.log('ids  :',this.editedIds);
+                            console.log('value of input :',input.value);
+                // input.addEventListener('blur',(event)=> {
+                //     console.log('current date :',  input.value +'  changed dtae  :',event.target.value);
+                // })
+                
+    
+                document.addEventListener('click', function handleOutsideClick(event) {
+                    console.log('event Listner :',input.value+'  value current :',currentValue);
+                   
+                    if (!input.contains(event.target) && !target.contains(event.target) ) {
+                        console.log('clicked outside');
+    
+                        let conInputDate=input.value;
+                        if(conInputDate){
+                            const dateParts = conInputDate.split('T');
+                            const [year, month, day] = dateParts[0].split('-');
+                            const timeParts = dateParts[1].split(':');
+                
+                            let hours = parseInt(timeParts[0], 10);
+                            const minutes = timeParts[1];
+                            console.log('hrs :',hours);
+                
+                           
+                            const ampm = hours >= 12 ? 'PM' : 'AM';
+                            hours = hours % 12;
+                            hours = hours ? hours : 12; 
+                            console.log('ampm :',ampm);
+                
+                            conInputDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year} ${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                            console.log('converted date:', conInputDate);
+                        }
+    
+    
+                        if (conInputDate == currentValue) {
+                            target.textContent = currentValue;
+                        } 
+                      
+                        document.removeEventListener('click', handleOutsideClick);
+                    }
+                });
+                
+                
+                
+                              target.textContent = '';
+                            target.appendChild(input);
+                
+                            
+                          
+                          //  }
+        
+        }
+        else if (target.tagName === 'INPUT') {
+        
+            console.log('target value before keyup ::',target.value);
+            const tdout = target.closest('td');
+            console.log('original value2:', tdout.dataset.value);
+            let currentValue = tdout.dataset.value;
+            console.log('current value out:', currentValue);
+        //  const changesToInput=target.value;
+        
+           target.readOnly = false;
+    
+            target.style.border='1px solid black';
+             this.handleKeyup = (event)=> {
+                const tdin = target.closest('td');
+                target.style.backgroundColor = '#FAFAD2';
+                target.dataset.edited="true";
+                tdin.dataset.edited = "true";
+                if (event.target.value === currentValue) {
+                    target.style.backgroundColor = '';
+                    tdin.dataset.edited = "false";
+                    target.dataset.edited="false";
+                }
+                
+                console.log('target value after::',target.value);
+                console.log('Key pressed:', event.key);
+                const tr = target.closest('tr');
+
+                let isAnyFieldEdited = false;
+                tr.querySelectorAll('td').forEach(td => {
+
+                    console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
+                    if (td.dataset.edited === "true") {
+                        isAnyFieldEdited = true;
+                    }
+                });
+               
+                const td = tr.querySelector('td:first-child');
+                console.log('td value  :',td);
+   
+           
+   
+                   const hiddenId= td.querySelector('input[type="hidden"]'); 
+                   if(hiddenId){
+                console.log('hiddenId  :',hiddenId.value);
+                console.log('this.editedIds  :',this.editedIds);
+                
+   
+                try{
+                   if(!this.editedIds.includes(hiddenId.value)){
+                   this.editedIds.push(hiddenId.value);
+                   console.log('edited id inside1:',this.editedIds);
+                   this.showSubmit=true;
+                  this.stopColumnRender=true;
+                   }
+                   else if(event.target.value==currentValue && !isAnyFieldEdited ){
+                    console.log('this.editedIds 1 :', this.editedIds);
+                    let index=this.editedIds.indexOf(hiddenId.value);
+                    if(index !== -1){
+                        this.editedIds.splice(index,1);
+                    }
+                    console.log('this.editedIds  2:', this.editedIds);
+                    if(this.editedIds.length==0){
+                        this.showSubmit=false;
+                    }
+                }
+               }
+               catch(error){
+                   console.log('err message ::',error.message);
+               }
+   
+           }
+              //  }
+               
+           
+              
+            
+            
+            };
+   
+            this.handleBlur=(event)=> {
+                console.log('event Listner :',target.value+'  value current :',currentValue);
+              //  if ( !target.contains(event.target) ) {
+                    console.log('clicked outside');
+                    if(event.target.value == currentValue) {
+                        target.readOnly = true;
+                        target.style.border = 'none';
+                     
+                    }
+                    target.readOnly=true;
+                    target.style.border = 'none';
+                    console.log("Removing keyup------------------------");
+                    target.removeEventListener('keyup', this.handleKeyup);
+
+               // }
+
+              
+            }
+
+            
+            
+            
+            // Adding the event listener
+            target.removeEventListener('blur', this.handleBlur);
+           // target.removeEventListener('keyup', handleKeyup);
+            console.log('remove keyup listner');
+            
+            // Removing the event listener
+           
+            target.addEventListener('blur', this.handleBlur);
+            target.addEventListener('keyup', this.handleKeyup);
+            console.log('add keyup listner');
+   
+   
+            console.log('edited id inside:',this.editedIds);
+       
+    
+        }
+        
+     else if (target.tagName === 'TD') {
+         
+       console.log('entered in td');
+         const td = target.querySelector('td');
+         
+       
+        // td.contentEditable = true;
+      
+        // this.target.focus();
+ 
+     }
+     console.log('edited id :',this.editedIds);
+ 
+ 
+ }
+ 
+ 
+ 
+ 
+ async submitData(){
+     if(this.editedIds.length>0){
+     console.log('id editted are :',this.editedIds);
+    
+     const checkedIds = [];
+     const jsonData = [];
+     let hasError=false;
+       
+ 
+     function isId(value) {
+         return typeof value === 'string' && /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/.test(value);
+     }
+
+     const emailRegex = /^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+    function validateEmail(email) {
+         return emailRegex.test(email);
+     }
+
+  function showToast(title, message, variant) {
+        const event = new ShowToastEvent({
+            title: title,
+            message: message,
+            variant: variant
+        });
+       this.dispatchEvent(event);
+    }
+ 
+   
+     this.template.querySelectorAll('tr').forEach(tr1 => {
+       
+           const editedRow = {};
+           let idFound=false;
+           console.log('tr outerhtml  :',tr1.outerHTML); 
+       
+           const firstTd = tr1.querySelector('td:first-child');
+          
+         if (firstTd) {
+           
+           
+                console.log('hidden id');
+
+                const hiddenCol = firstTd.querySelector('input[type="hidden"]');
+                const tr = hiddenCol.closest('tr');
+                const tds = tr.querySelectorAll('td');
+                tds.forEach((td,index) => {
+                    const input = td.querySelector('input[type="text"]');
+                    const inputeditted = td.querySelector(' input[data-edited="true"]');
+                    const select = td.querySelector('select');
+                  
+
+                    if(input){
+                    console.log('data editted :',inputeditted);
+                        console.log('input data set :',input.dataset);
+                         
+                        console.log('input data set :',input.dataset.edited);
+                    }
+
+
+                    if(this.editedIds.includes(hiddenCol.value) && this.requiredFieldMap[td.dataset.header]){
+                    
+                        let value;
+                        console.log('header :', td.dataset.header);
+                        console.log('td value :', td.textContent);
+                        if(td.dataset.type === "STRING"){
+                            if(input){
+                                console.log('input value :',input.value);
+                                value=input.value;
+                                if(value==''){
+                                    td.style.border='2px solid red';
+                                  //  showToast.call(this, 'Error', 'Please enter a value in required field.', 'error');
+                                  this.errorToastMessage = true;
+                                  this.errorMsg = 'Please enter a value in required field.';  
+                                  hasError=true;
+                                }
+                            }
+                        }
+                       else if(td.dataset.type==='PICKLIST'){
+                        const tdValue=td.textContent;
+                        if(select){
+                            value=select.value;
+                           console.log('select value is :',value);
+                           
+                        }
+
+                           if(tdValue=='' || value=='--None--'){
+                            td.style.border='2px solid red';
+                         //   showToast.call(this, 'Error', 'Please enter a value in required field.', 'error');
+                            this.errorToastMessage = true;
+                            this.errorMsg = 'Please enter a value in required field.';
+                            hasError=true;
+                        
+                           }
+                       }
+                       else if(td.dataset.type==='DATE'){
+
+                        console.log('date field is :',td.dataset.value);
+                        if(td.dataset.value=="null"){
+                            td.style.border='2px solid red';
+                           // showToast.call(this, 'Error', 'Please enter a value in required field.', 'error');
+                            this.errorToastMessage = true;
+                            this.errorMsg = 'Please enter a value in required field.';
+                            hasError=true;
+                        }
+
+
+                       }
+
+                       else if(td.dataset.type==='DATETIME'){
+
+                        console.log('date time field is :',td.dataset.value);
+                        if(td.dataset.value=="null"){
+                            td.style.border='2px solid red';
+                           // showToast.call(this, 'Error', 'Please enter a value in required field.', 'error');
+                           this.errorToastMessage = true;
+                                     this.errorMsg = 'Please enter a value in required field.';
+                            hasError=true;
+                        }
+
+
+                       }
+                        
+                      
+                        
+
+                    }
+
+
+
+                    // const header = this.tableHeaders[index];
+                    // if(this.fieldTypeMap[header]=='PICKLIST'){
+                    //     console.log('header.value',header +'  td text content :'+td.textContent);
+                    //     if(this.editedIds.includes(hiddenCol.value)){
+                    //         console.log('edited row',editedRow);
+                    //         console.log('edited value of restricted header :',header + '|| ' +JSON.stringify(editedRow)+' ||'+editedRow[header]);
+                    //     }
+                    //     if(select){
+                    //     console.log('select.value',select.value +'  td text content :'+td.textContent);
+                    //     }
+                    // }
+
+
+
+
+//                     if (select && td.dataset.edited === "true") {
+//     const selectedValue = select.value;
+//     console.log('Selected picklist value:', selectedValue);
+// }
+
+                    console.log('Value start:', td.textContent+'  index  :'+ index);
+                    // console.log('selet :',select);
+                    // console.log('picklist change',this.pickListChange);
+                    // if(select && this.pickListChange=='true'){
+                    //      console.log('selet2 :',select.value);
+                    //     // console.log('selet2 :',select.dataset);
+                    //     // console.log('selet2 :',select.dataset.edited);
+                    //     // console.log('selet2 :',select.edited);
+                    //     console.log('picklist change inside',this.pickListChange);
+
+                    //    // this.pickListChange=false;
+                    // }
+                    
+                    // if(select && select.dataset.edited=='true'){
+                    //     console.log('selet editted');
+                    // }
+                    
+
+                    // const header = this.tableHeaders[index];
+                    // if(this.requiredFieldMap[header] && this.fieldTypeMap[header]=='PICKLIST'){
+                    //     console.log('header.value',header +'  td text content :'+td.textContent);
+
+                    //     if(select){
+                    //     console.log('select.value',select.value +'  td text content :'+td.textContent);
+                    //     }
+                    // }
+
+
+
+                    if(td.dataset.type==='DATE' && td.dataset.edited ==='true'){
+console.log('date field is eddited :',td.dataset.value);
+                    }
+
+                    if((input && input.dataset.edited=='true') || (select && td.dataset.edited === "true") || (td.dataset.type==='DATE' && td.dataset.edited ==='true') || (td.dataset.type==='DATETIME' && td.dataset.edited ==='true') || (td.dataset.type==='BOOLEAN' && td.dataset.edited ==='true') ){
+                        console.log('input condition');
+                        console.log('input value  :  hidden value  :'+hiddenCol.value);
+                      // if( this.editedIds.includes(hiddenCol.value)){
+                        editedRow['Id'] = hiddenCol.value;
+                      // }
+                        console.log('headers :'+this.tableHeaders);
+                        const td2 = tr1.querySelector('td:nth-child(2)');
+                        if(td2){
+                            const checkbox = td2.querySelector('input[type="checkbox"]');
+                            if(checkbox){
+                                const header = this.tableHeaders[index-2];
+                                if(this.fieldTypeMap[header]!=='PICKLIST'){
+                                
+                                     if(this.fieldTypeMap[header]=='EMAIL' && !validateEmail(input.value)){
+                                    console.log('email :' ,validateEmail(input.value));
+                                    input.style.border='2px solid red';
+                                      //showToast.call(this, 'Error', 'Please enter a proper email address.', 'error');
+                                      this.errorToastMessage = true;
+                                     this.errorMsg = 'Please enter a proper email address.';
+                            hasError=true;
+                                    
+                                  
+                                    return;
+                                }
+                                editedRow[header] = input.value; 
+                                console.log('checkbox condt.');
+                            }
+                                else if(select){
+                                    console.log('select condt.11');
+                                   
+                                    editedRow[header] = select.value;
+                                }
+                                else if(td.dataset.type==='DATE' && td.dataset.edited ==='true'){
+                                    console.log('date condition :');
+                                    
+                                    if(this.editedIds.includes(hiddenCol.value)){
+                                    editedRow[header] = td.dataset.value;
+                                    }
+    
+                                }
+
+                                else if(td.dataset.type==='DATETIME' && td.dataset.edited ==='true'){
+                                    console.log('date time condition :');
+                                    
+                                    if(this.editedIds.includes(hiddenCol.value)){
+                                    editedRow[header] = td.dataset.value;
+                                    }
+    
+                                }
+
+                                else if(td.dataset.type==='BOOLEAN' && td.dataset.edited ==='true'){
+                                    console.log('Boolean condition :');
+                                   
+                                  //  if(this.editedIds.includes(hiddenCol.value)){
+                                    editedRow[header] = td.dataset.value;
+                                  //  }
+    
+                                }
+
+                         
+
+                            }
+                            else if (select) { 
+                                console.log('select condt.');
+                                const header = this.tableHeaders[index - 1];
+                              // if(this.editedIds.includes(hiddenCol.value)){
+                                editedRow[header] = select.value;
+                             //  }
+                                // if(select.value=='--None--'){
+                                //     select.textContent='';
+                                // }
+                            }
+                            else if(td.dataset.type==='DATE' && td.dataset.edited ==='true'){
+                                console.log('date condition :');
+                                const header = this.tableHeaders[index - 1];
+                              //  if(this.editedIds.includes(hiddenCol.value)){
+                                editedRow[header] = td.dataset.value;
+                              //  }
+
+                            }
+
+                            else if(td.dataset.type==='DATETIME' && td.dataset.edited ==='true'){
+                                console.log('date time condition :');
+                                const header = this.tableHeaders[index - 1];
+                              //  if(this.editedIds.includes(hiddenCol.value)){
+                                editedRow[header] = td.dataset.value;
+                              //  }
+
+                            }
+
+                            else if(td.dataset.type==='BOOLEAN' && td.dataset.edited ==='true'){
+                                console.log('Boolean condition :');
+                                const header = this.tableHeaders[index - 1];
+                              //  if(this.editedIds.includes(hiddenCol.value)){
+                                editedRow[header] = td.dataset.value;
+                              //  }
+
+                            }
+
+                        
+                       
+                      
+                            else{
+                                const header = this.tableHeaders[index-1];
+
+                                if(this.fieldTypeMap[header]=='EMAIL' && !validateEmail(input.value) ){
+                                    console.log('email :' ,validateEmail(input.value));
+                                    input.style.border='2px solid red';
+                                     // showToast.call(this, 'Error', 'Please enter a proper email address.', 'error');
+                                     this.errorToastMessage = true;
+                                     this.errorMsg = 'Please enter a proper email address.';
+                            hasError=true;
+                                    return;
+                                }
+                                editedRow[header] = input.value;
+                                console.log('without checkbox condt.');
+                                console.log('input value :',input.value);
+                            }
+                        }
+                       
+                   else{
+                        const header = this.tableHeaders[index-1];
+                             if(this.fieldTypeMap[header]=='EMAIL' && !validateEmail(input.value)){
+                                    console.log('email :' ,validateEmail(input.value));
+                                     // showToast.call(this, 'Error', 'Please enter a proper email address.', 'error');
+                                     this.errorToastMessage = true;
+         this.errorMsg = 'Please enter a proper email address';
+                            hasError=true;
+                                    return;
+                                }
+                        editedRow[header] = input.value;
+                        console.log('without checkbox condt.2');
+                      }
+
+                    }
+
+                  
+
+
+                    
+                });
+                if(editedRow && Object.keys(editedRow).length > 0){
+                jsonData.push(editedRow);
+                }
+            // }
+         }
+          
+     });
+
+
+        if (hasError) {
+            return; 
+        }
+    
+  
+      console.log('json data', JSON.stringify(jsonData));
+      //console.log('output  ::',this.output);
+ 
+   await updateSObject({jsonData:JSON.stringify(jsonData)})
+  .then(result => {
+     
+     if (result.startsWith('Record')) {
+ console.log('success');
+ this.successToastMessage = true;
+ this.successMsg = result;
+//  const sc=new ShowToastEvent({
+ 
+//         title:'Success',
+//         message:result,
+//         variant:'Success',
+//         mode: 'sticky'
+//     })
+//     this.dispatchEvent(sc);
+ //this.successToastMessage=true;
+ //this.successMsg=result;
+ jsonData.forEach((editedEntry) => {
+     const idToUpdate = editedEntry.Id;
+  
+     this.globalData = this.globalData.map((entry) => {
+         if (entry.Id === idToUpdate) {
+            const updatedEntry = { ...entry, ...editedEntry };
+             for (let key in updatedEntry) {
+                if (updatedEntry[key] === '--None--') {
+                    updatedEntry[key] = '';
+                }
+            }
+            
+            return updatedEntry;
+         }
+         return entry;
+     });
+ });
+     }
+     else{
+         console.log('fail');
+         this.errorToastMessage = true;
+         this.errorMsg = result;
+    //  const err=new ShowToastEvent({
+ 
+    //         title:'Error',
+    //         message:result,
+    //         variant:'error',
+    //         mode: 'sticky'
+    //     })
+    //     this.dispatchEvent(err);
+     }
+     
+ 
+   
+     
+ 
+     // const err=new ShowToastEvent({
+ 
+     //     title:'Success',
+     //     message:result,
+     //     variant:'Success',
+     //     mode: 'sticky'
+     // })
+     // this.dispatchEvent(err);
+ 
+  })
+ //  .catch(error=>{
+ //     console.log('err msg ::'+JSON.stringify(error));
+     
+ //     // const err=new ShowToastEvent({
+ //     //     title:'Error',
+ //     //     message:'error is : '+error.body.message,
+ //     //     variant:'error',
+ //     //     mode: 'sticky'
+ //     // })
+ //     // this.dispatchEvent(err);
+ 
+ //  })
+  this.editedIds=[];
+  this.showSubmit=false;
+  
+  this.populateTableBody();
+ 
+ 
+     }
+ 
+ }
+
+ handleCancel(){
+    if(this.editedIds.length>0){
+        this.populateTableBody();
+        this.editedIds=[];
+    }
+    this.showSubmit=false;
+}
+
+handleClose() {
+    this.successToastMessage = false;
+}
+
+handleErrorClose() {
+    this.errorToastMessage = false;
+}
+
 
 }

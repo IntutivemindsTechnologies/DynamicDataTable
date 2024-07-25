@@ -1,5 +1,6 @@
 public with sharing class DynamicDataTableHandler {
     
+    
     @AuraEnabled(cacheable=true)
     public static String getObjectName(Id recordId) {
         String nameById;
@@ -94,6 +95,7 @@ public with sharing class DynamicDataTableHandler {
         }
         Schema.DescribeSObjectResult objectDescribe = Schema.getGlobalDescribe().get(objectName).getDescribe();
         Schema.DescribeFieldResult fieldResult = objectDescribe.fields.getMap().get(fieldName).getDescribe();
+        System.debug('field :'+fieldResult.isUpdateable());
         return fieldResult.isUpdateable(); 
     }
     
@@ -239,6 +241,273 @@ public with sharing class DynamicDataTableHandler {
         }
         return referenceFieldToAppend;
     }
+    
+    
+    
+    
+     @AuraEnabled
+    public static String updateSObject(String jsonData) {
+          try {
+        System.debug('json Data ::'+jsonData);
+        List<SObject> recordsToUpdate = new List<SObject>();
+        
+        List<Object> requestDataList = (List<Object>) JSON.deserializeUntyped(jsonData);
+        for (Object item : requestDataList) {
+            Map<String, Object> requestData = (Map<String, Object>) item;
+            System.debug('items are :'+requestData);
+            Id recordId = (Id) requestData.get('Id');
+            
+            String sObjectApiName = recordId.getSObjectType().getDescribe().getName();
+            System.debug('sObjectApiName  ::'+sObjectApiName);  
+            
+            SObject sObj = Schema.getGlobalDescribe().get(sObjectApiName).newSObject(recordId);
+            System.debug('sObj   object  ::'+sObj); 
+            
+            for(String fieldName: requestData.keySet()){
+                System.debug('sobj list inside :'+sObj);
+                System.debug('fieldName :'+fieldName);
+                 Object fieldValue = requestData.get(fieldName);
+                
+                if (fieldValue == '--None--') {
+                    fieldValue = ''; 
+                }
+                
+                
+                Schema.DescribeFieldResult fieldResult = sObj.getSObjectType().getDescribe().fields.getMap().get(fieldName).getDescribe();
+                System.debug('field is updatable :'+fieldResult.isUpdateable());
+                
+                
+               // if(fieldResult.isUpdateable()  ){    // && !fieldName.endsWith('Id')
+                    
+                //    sObj.put(fieldName, requestData.get(fieldName));
+                    
+              // }
+              //  
+             
+               if (fieldResult.isUpdateable()) {
+               // Object fieldValue = requestData.get(fieldName);
+                if (fieldResult.getType() == Schema.DisplayType.Date && fieldValue != null) {
+                   System.debug('date');
+                    sObj.put(fieldName, Date.valueOf((String) fieldValue));
+                } else if (fieldResult.getType() == Schema.DisplayType.DateTime && fieldValue != null ) {
+                   System.debug('datenTime');
+                     String dateTimeString = (String) fieldValue;
+                    System.debug('field value :'+dateTimeString);
+                     if ( !dateTimeString.contains(' ')) {
+                            dateTimeString = dateTimeString.replace('T', ' ') + ':00';
+                            
+                        }
+                 
+                    sObj.put(fieldName, DateTime.valueOf(dateTimeString));
+
+                   
+                } else if (fieldResult.getType() == Schema.DisplayType.Boolean && fieldValue != null) {
+                   System.debug('boolean');
+                    sObj.put(fieldName, Boolean.valueOf((String) fieldValue));
+                }
+                    else if (fieldResult.getType() == Schema.DisplayType.DOUBLE && fieldValue != null) {
+                  System.debug('boolean');
+                    sObj.put(fieldName, DOUBLE.valueOf((String) fieldValue));
+                }
+                       else if (fieldResult.getType() == Schema.DisplayType.CURRENCY && fieldValue != null) {
+                  System.debug('boolean');
+                    sObj.put(fieldName, DOUBLE.valueOf((String) fieldValue));
+                }
+                else {
+                    sObj.put(fieldName, fieldValue);
+                }
+            }
+                
+                
+                
+                /*
+else {
+System.debug('field ends with Id'+fieldName);
+}
+*/
+                
+                
+                
+            }
+            recordsToUpdate.add(sObj);
+            
+        }
+        System.debug('record to update ::'+recordsToUpdate);
+        if(!recordsToUpdate.isEmpty()){
+            Database.update(recordsToUpdate);
+            return 'Record Saved Successfully';
+        }
+        else{
+            return 'Failed';
+            
+        }
+          }
+         catch (DmlException dmlEx) {
+      
+             System.debug('dml exception :'+dmlEx);
+        System.debug('DmlException Error: ' + dmlEx.getMessage());
+             String message=dmlEx.getMessage();
+            System.debug(message.substring(message.indexOf('[')+1,message.indexOf(']'))) ;
+        return 'Failed:The row you are trying to update is missing required fields. Please include these required fields in your SOQL query or ensure they are populated in the backend before updating. Required Fields are:- '+ message.substring(message.indexOf('[')+1,message.indexOf(']')) ;
+    }
+        catch(Exception e){
+             System.debug('Error  ' + e.getMessage());
+        return 'Failed  :'+e.getMessage();
+        }
+        
+    }
+    
+    
+    
+    
+    @AuraEnabled(cacheable=true)
+    public static  Map<String,String> getMapofTypeForFields(String query){
+        System.debug('query :'+query);
+        Map<String,String> fieldMap=new Map<String,String>();
+        
+          String objectName;
+        Matcher objectMatcher = Pattern.compile('(?i)FROM\\s+(\\w+)').matcher(query);
+        if (objectMatcher.find()) {
+            objectName = objectMatcher.group(1);
+        }
+        SObjectType objToken = Schema.getGlobalDescribe().get(objectname);
+        System.debug('Object name :'+objToken);
+        
+         Set<String> queriedFields = new Set<String>();
+        Matcher matcher = Pattern.compile('(?i)SELECT\\s+(.*?)\\s+FROM').matcher(query);
+        if (matcher.find()) {
+            String[] fields = matcher.group(1).split('\\s*,\\s*');
+            for (String field : fields) {  
+                 Schema.DescribeFieldResult fieldResult = objToken.getDescribe().fields.getMap().get(field).getDescribe();
+            
+            String name = fieldResult.getName();
+                 String type = String.valueOf(fieldResult.getType());
+                  Boolean isRequired = !fieldResult.isNillable() && fieldResult.isCreateable() && !fieldResult.isDefaultedOnCreate();
+                if(isRequired){
+                System.debug('reuired field :'+name +'  type :'+type);
+                    }
+                // Schema.DisplayType type=fieldResult.getType();
+          //  System.debug('names :'+name);
+             //   System.debug('types :'+type);
+                queriedFields.add(name);
+                fieldMap.put(name,type);
+            }  
+        }
+        
+        System.debug('fields :'+queriedFields);
+        
+        System.debug('field Map :'+fieldMap);
+        return fieldMap;
+       /* 
+        for(String fieldName:queriedFields){
+
+             Schema.DescribeFieldResult fieldResult = objToken.getDescribe().fields.getMap().get(fieldName).getDescribe();
+            
+            String name = fieldResult.getName();
+            System.debug('names :'+name);
+        }*/
+        
+        
+        
+        
+        
+        
+    }
+    
+    
+    
+    @AuraEnabled(cacheable=true)
+    public static List<String> getPicklistValue(String query,String field){
+         List<String> picklistValues = new List<String>();
+        try{
+            
+              String objectName;
+        Matcher objectMatcher = Pattern.compile('(?i)FROM\\s+(\\w+)').matcher(query);
+        if (objectMatcher.find()) {
+            objectName = objectMatcher.group(1);
+        }
+        SObjectType objToken = Schema.getGlobalDescribe().get(objectname);
+        System.debug('Object name :'+objToken);
+            
+              Schema.DescribeFieldResult fieldResult = objToken.getDescribe().fields.getMap().get(field).getDescribe();
+            String type = String.valueOf(fieldResult.getType());
+            System.debug('type is :'+type);
+            if(type=='PICKLIST'){
+                 for (Schema.PicklistEntry entry : fieldResult.getPicklistValues()) {
+                     System.debug('entry :'+entry);
+                picklistValues.add(entry.getLabel());
+            }
+            }
+            System.debug('picklist val :'+picklistValues);
+            
+        }
+        catch(Exception e){
+            System.debug('error  :'+e.getMessage());
+            
+        }
+        return picklistValues;
+        
+    
+        
+    }
+    
+    
+    
+      @AuraEnabled(cacheable=true)
+    public static  Map<String,Boolean> getMapofRequiredField(String query){
+        System.debug('query :'+query);
+        Map<String,Boolean> fieldMap=new Map<String,Boolean>();
+        
+          String objectName;
+        Matcher objectMatcher = Pattern.compile('(?i)FROM\\s+(\\w+)').matcher(query);
+        if (objectMatcher.find()) {
+            objectName = objectMatcher.group(1);
+        }
+        SObjectType objToken = Schema.getGlobalDescribe().get(objectname);
+        System.debug('Object name :'+objToken);
+        
+        // Set<String> queriedFields = new Set<String>();
+        Matcher matcher = Pattern.compile('(?i)SELECT\\s+(.*?)\\s+FROM').matcher(query);
+        if (matcher.find()) {
+            String[] fields = matcher.group(1).split('\\s*,\\s*');
+            for (String field : fields) {  
+                 Schema.DescribeFieldResult fieldResult = objToken.getDescribe().fields.getMap().get(field).getDescribe();
+            
+            String name = fieldResult.getName();
+                // String type = String.valueOf(fieldResult.getType());
+                  Boolean isRequired = !fieldResult.isNillable() && fieldResult.isCreateable() && !fieldResult.isDefaultedOnCreate() ;
+                System.debug('name :'+name+'  isRequired  :'+isRequired);
+              //  if(isRequired){
+               // System.debug('reuired field :'+name );
+               //     }
+                // Schema.DisplayType type=fieldResult.getType();
+          //  System.debug('names :'+name);
+             //   System.debug('types :'+type);
+              //  queriedFields.add(name);
+                fieldMap.put(name,isRequired);
+            }  
+        }
+        
+        //System.debug('fields :'+queriedFields);
+        
+        System.debug('field Map :'+fieldMap);
+        return fieldMap;
+       /* 
+        for(String fieldName:queriedFields){
+
+             Schema.DescribeFieldResult fieldResult = objToken.getDescribe().fields.getMap().get(fieldName).getDescribe();
+            
+            String name = fieldResult.getName();
+            System.debug('names :'+name);
+        }*/
+        
+        
+        
+        
+        
+        
+    }
+    
     
     
 }
