@@ -32,8 +32,6 @@ public class DynamicDataTableHandlerTestClass {
         String iconName=DynamicDataTableHandler.iconNamesForObjects(accQuery);
         System.assert(iconName.startsWith('standard:'));
         
-        String accountName=DynamicDataTableHandler.getObjectName(acc.Id);
-        System.assertEquals('Test Account',accountName);  
     }
     
     
@@ -93,6 +91,25 @@ public class DynamicDataTableHandlerTestClass {
     }
     
     
+    @isTest
+    static void testGetUpdateStatusNew() {
+        
+        Account acc = new Account(Name='Test Account', AccountNumber='123');
+        insert acc;
+        
+        Contact con = new Contact( FirstName='Test', LastName='Contact',Phone='123456', AccountId=acc.Id);
+        insert con;
+        String accQuery = 'SELECT Id, Name, AccountNumber FROM Account';
+        String conQuery = 'SELECT Id, FirstName, LastName, Phone, AccountId FROM Contact';
+        Test.startTest();       
+        Map<String, Boolean> accFieldMap = DynamicDataTableHandler.getUpdateStatusNew(accQuery);
+        Map<String, Boolean> conFieldMap = DynamicDataTableHandler.getUpdateStatusNew(conQuery);       
+        Test.stopTest();
+        System.assertEquals(true, accFieldMap.containsKey('Id'));
+        System.assertEquals(false, accFieldMap.get('Id'));
+    }
+    
+    
     
     @isTest
     static void testGetPicklistValue() {
@@ -102,8 +119,7 @@ public class DynamicDataTableHandlerTestClass {
         String conQuery = 'SELECT Id, FirstName, LastName, Phone, LeadSource FROM Contact';
         Test.startTest();
         List<String> picklistValues = DynamicDataTableHandler.getPicklistValue(conQuery, 'LeadSource');
-        Test.stopTest();
-        
+        Test.stopTest();       
         System.assert(picklistValues.contains('Web'), 'Picklist values should contain "Web"');
         
     }
@@ -118,8 +134,7 @@ public class DynamicDataTableHandlerTestClass {
         Contact con = new Contact(  FirstName='Test', LastName='Contact',  Phone='123456', AccountId=acc.Id);
         insert con;
         
-        String jsonData = '[{"Id":"' + con.Id + '", "FirstName":"Updated", "LastName":"Contact"}]';
-        
+        String jsonData = '[{"Id":"' + con.Id + '", "FirstName":"Updated", "LastName":"Contact"}]';      
         Test.startTest();
         String result = DynamicDataTableHandler.updateSObject(jsonData);
         Test.stopTest();
@@ -127,8 +142,7 @@ public class DynamicDataTableHandlerTestClass {
         
         Contact updatedCon = [SELECT FirstName, LastName, Phone FROM Contact WHERE Id = :con.Id];
         System.assertEquals('Updated', updatedCon.FirstName);
-        System.assertEquals('Contact', updatedCon.LastName);
-        
+        System.assertEquals('Contact', updatedCon.LastName);      
     }
     
     
@@ -136,18 +150,76 @@ public class DynamicDataTableHandlerTestClass {
     @isTest
     static void testGetMapofTypeForFields() {
         
-        Account acc = new Account(Name='Test Account', AccountNumber='123');
+        Account acc = new Account(Name='Test Account', AccountNumber='123',Industry = 'abc');
         insert acc;
         
         Contact con = new Contact( FirstName='Test', LastName='Contact', Phone='123456', AccountId=acc.Id  );
         insert con;
-        String conQuery = 'SELECT Id, FirstName, LastName, Phone FROM Contact';
-        
+        String conQuery = 'SELECT Id, FirstName, LastName,AccountId,Account.Name, Phone FROM Contact';
         Test.startTest();
         Map<String, String> conFieldMap = DynamicDataTableHandler.getMapofTypeForFields(conQuery);
         Test.stopTest();
         System.assertEquals('ID', conFieldMap.get('Id'));
         System.assertEquals('STRING', conFieldMap.get('FirstName'));
-        
+        System.assertEquals('STRING', conFieldMap.get('Account.Name')); 
     }
+    
+    
+    @isTest
+    static void testGetAccountNames() {     
+        Account acc1 = new Account(Name = 'Test Account A');
+        Account acc2 = new Account(Name = 'Test Account B');
+        Account acc3 = new Account(Name = 'Sample Account C');
+        insert new List<Account>{acc1, acc2, acc3};
+            
+            String sObjectName = 'Account';
+        String field = 'Name';
+        String searchKey = 'Test';      
+        Test.startTest();
+        List<Map<String, String>> accountNames = DynamicDataTableHandler.getNamesOfObject(sObjectName, field, searchKey);
+        Test.stopTest();
+        System.assertEquals(2, accountNames.size(), 'There should be 2 results for "Test" search key'); 
+    }
+    
+    
+    
+    @isTest
+    static void testGetRelatedPicklistValue() { 
+        Account acc = new Account(Name = 'Test Account');
+        insert acc;
+        String objectName = 'Account';
+        String field = 'Industry';
+        
+        Test.startTest();
+        List<String> picklistValues = DynamicDataTableHandler.getRelatedPicklistValue(objectName, field);
+        Test.stopTest();
+        System.assert(picklistValues.size() > 0, 'Positive');
+        System.assert(picklistValues.contains('Agriculture'), 'Picklist value present');     
+    }
+    
+    
+    @isTest
+    static void testGetRelatedRecords() {      
+        Account acc1 = new Account(Name = 'Account 1', Industry = 'Technology');     
+        insert acc1;
+        List<Map<String, String>> referenceData = new List<Map<String, String>>();           
+        Map<String, String> accountData1 = new Map<String, String>();
+        accountData1.put('query', 'SELECT Id, Name FROM Account');
+        accountData1.put('id', acc1.Id);
+        accountData1.put('fields', 'Id, Name, Industry');
+        referenceData.add(accountData1);
+        Test.startTest();
+        List<SObject> relatedRecords = DynamicDataTableHandler.getRelatedRecords(referenceData);  
+        Test.stopTest();
+        
+        System.assertEquals(1, relatedRecords.size());
+        Map<String, SObject> resultMap = new Map<String, SObject>();
+        for (SObject record : relatedRecords) {
+            resultMap.put(record.Id, record);
+        }      
+        Account resultAcc1 = (Account)resultMap.get(acc1.Id);  
+        System.assertEquals('Account 1', resultAcc1.Name);  
+    }
+    
+    
 }

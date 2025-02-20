@@ -1,15 +1,27 @@
 import { LightningElement, api, track } from 'lwc';
 import getFieldName from '@salesforce/apex/DynamicDataTableHandler.getFieldName';
 import getrelatedFieldName from '@salesforce/apex/DynamicDataTableHandler.getrelatedFieldName';
-import getUpdateStatus from '@salesforce/apex/DynamicDataTableHandler.getUpdateStatus';
+import getUpdateStatusNew from '@salesforce/apex/DynamicDataTableHandler.getUpdateStatusNew';
 import getList from '@salesforce/apex/DynamicDataTableHandler.getDataFromQuery';
 import getObjectLabelName from '@salesforce/apex/DynamicDataTableHandler.getObjectLabelName';
 import iconNamesForObjects from '@salesforce/apex/DynamicDataTableHandler.iconNamesForObjects';
 import updateSObject from '@salesforce/apex/DynamicDataTableHandler.updateSObject';
-import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getMapofTypeForFields from '@salesforce/apex/DynamicDataTableHandler.getMapofTypeForFields';
 import getPicklistValue from '@salesforce/apex/DynamicDataTableHandler.getPicklistValue';
 import getMapofRequiredField from '@salesforce/apex/DynamicDataTableHandler.getMapofRequiredField';
+import getNamesOfObject from '@salesforce/apex/DynamicDataTableHandler.getNamesOfObject';
+import getRelatedRecords from '@salesforce/apex/DynamicDataTableHandler.getRelatedRecords';
+import getRelatedPicklistValue from '@salesforce/apex/DynamicDataTableHandler.getRelatedPicklistValue';
+import { handleSort, sortData } from "./utils/sortingHandler";
+import { handleDragStart, handleDrop } from "./utils/columnDragHandler";
+import { handleKeyUp, searchTable } from "./utils/globalFilterHandler";
+import { handleInputChange } from "./utils/columnFilterHandler";
+import { handleReset } from "./utils/resetHandler";
+import { handleCsvData, convertToCsvFile, createDownload, handleExcelData, createXlsDownload } from "./utils/csvXlsHandler";
+import { checkAllCheckboxes } from "./utils/mainCheckBoxHandler";
+import { handleCheckboxChange } from "./utils/singleCheckBoxHandler";
+import { handleScroll } from "./utils/scrollHandler";
+import { handleIdColumn } from "./utils/idColumnHandler";
 
 
 export default class DynamicDataTable extends LightningElement {
@@ -25,7 +37,7 @@ export default class DynamicDataTable extends LightningElement {
     showInput = false;
     selectedHeaderId = '';
     columnFilters = {};
-    stopColumnRender = false;
+    @api stopColumnRender = false;
     @api tableDataCheckBox;
     @api selectedRows = [];
     isMainCheckboxChecked = false;
@@ -73,7 +85,20 @@ export default class DynamicDataTable extends LightningElement {
     @api handleBlur = null;
     successToastMessage;
     errorToastMessage;
-
+    @api exportData;
+    @api showExportButtons = false;
+    showSearchLookUp1 = true;
+    showSearchLookup2 = true;
+    childLookup = true;
+    objectNameForChild;
+    fieldNameForChild;
+    inputValueForChild;
+    @track selectedTdElement;
+    dynamicInstance;
+    @track accountNames = [];
+    debounceTimeout;
+    hidColId = [];
+    hasError = false;
 
 
 
@@ -85,13 +110,16 @@ export default class DynamicDataTable extends LightningElement {
                 if (this.tableData && this.tableData.toLowerCase().trim().indexOf("[") === 0) {
                     this.tableData = JSON.parse(this.tableData);
                     this.tableHeaders = Object.keys(this.tableData[0]);
-                    this.tableHeaderLabel = false;
+                    this.tableHeaderLabel = this.tableHeaders;
                     this.tableDataPn = this.tableData;
                     this.globalData = this.tableDataPn;
                     this.totalRecords = this.globalData.length;
                     this.isLoading = false;
                     if (this.objectLabel == null) {
                         this.objectLabel = 'JSON Data';
+                    }
+                    if (this.exportData) {
+                        this.showExportButtons = true;
                     }
                     this.iconName = 'standard:dataset';
                 }
@@ -132,14 +160,18 @@ export default class DynamicDataTable extends LightningElement {
         }
         // Condition for flow record input
         else if (this.flowRecord.length > 0) {
-            this.tableHeaderLabel = false;
+            this.inlineEditing=false;
             this.tableData = this.flowRecord;
             this.tableHeaders = Object.keys(this.tableData[0]);
+            this.tableHeaderLabel = this.tableHeaders;
             this.tableDataPn = this.flowRecord;
             this.globalData = this.tableDataPn;
             this.isLoading = false;
             if (this.objectLabel == null) {
                 this.objectLabel = 'Flow Record Data';
+            }
+            if (this.exportData) {
+                this.showExportButtons = true;
             }
             this.iconName = 'standard:dataset';
         }
@@ -154,8 +186,9 @@ export default class DynamicDataTable extends LightningElement {
 
     // Fetches SOQL data and processes it
     getSoqlData() {
-
-
+        if (this.exportData) {
+            this.showExportButtons = true;
+        }
 
         //Function to check if a value is a valid ID
         function isIds(value) {
@@ -199,13 +232,10 @@ export default class DynamicDataTable extends LightningElement {
         getList({ query: this.soql, limitSize: this.rowSize, offset: this.rowOffset })
             .then(async result => {
                 this.tableData = JSON.parse(result);
-
-
                 this.fieldTypeMap = await getMapofTypeForFields({ query: this.soql });
-
-
+                console.log('field type ::',this.fieldTypeMap);
+                this.isUpdatableMap = await getUpdateStatusNew({ query: this.soql });
                 this.requiredFieldMap = await getMapofRequiredField({ query: this.soql });
-
 
 
                 if (this.tableData.length === 0 && this.globalData.length === 0) {
@@ -230,18 +260,23 @@ export default class DynamicDataTable extends LightningElement {
                     }
 
                     if (this.toggleIdColumn == true && this.showtoggle == true) {
-
                         for (const entry of this.tableData) {
+                           // console.log('entry ::',entry);
                             for (const header of Object.keys(entry)) {
+                              //  console.log('header firstt:',header);
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
                                     try {
                                         var keyData = entry[header];
-                                        if (keyData != null && typeof keyData == 'object') {
+                                        if (keyData != null && typeof keyData == 'object' && this.fieldTypeMap[header] !== 'ADDRESS') { //
                                             for (const objKey of Object.keys(keyData)) {
+                                               // console.log('header :',header);
+                                               // console.log('obj key ::',objKey);
                                                 if (objKey !== 'attributes' && objKey !== 'Id') {
+                                                    console.log('entered');
                                                     //Getting column header name for reference object field.
                                                     let relatedLabel = await getrelatedFieldName({ objectName: header, fieldName: objKey });
-                                                    if (!this.tableHeaderLabel.includes(relatedLabel)) {
+                                                  //  console.log('related label ::',relatedLabel);
+                                                    if (!this.tableHeaderLabel.includes(relatedLabel) && relatedLabel !== null) {
                                                         this.tableHeaderLabel.push(relatedLabel);
                                                         this.relatedLabelMap[relatedLabel] = header + '.' + objKey;
                                                     }
@@ -255,12 +290,11 @@ export default class DynamicDataTable extends LightningElement {
                                         else {
                                             ////Getting column header name for field.
                                             label = await getFieldName({ query: this.soql, fieldName: header });
+                                            console.log('label ::',label);
                                             this.tableHeaderLabel.push(label);
                                             this.relatedLabelMap[label] = header;
                                             this.tableHeaders.push(header);
-                                            //Getting the status of field whether updatable or not.
-                                            let isUpdateCheck = await getUpdateStatus({ query: this.soql, fieldName: header });
-                                            this.isUpdatableMap[header] = isUpdateCheck;
+
                                         }
                                     } catch (error) {
                                     }
@@ -289,7 +323,7 @@ export default class DynamicDataTable extends LightningElement {
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
                                     try {
                                         var keyData = entry[header];
-                                        if (keyData != null && typeof keyData == 'object') {
+                                        if (keyData != null && typeof keyData == 'object' && this.fieldTypeMap[header] !== 'ADDRESS') {
                                             for (const objKey of Object.keys(keyData)) {
                                                 if (objKey !== 'attributes' && objKey !== 'Id') {
                                                     //Getting column header name for reference object field.
@@ -311,9 +345,7 @@ export default class DynamicDataTable extends LightningElement {
                                             this.tableHeaderLabel.push(label);
                                             this.relatedLabelMap[label] = header;
                                             this.tableHeaders.push(header);
-                                            //Getting the status of field whether editable or not.
-                                            let isUpdateCheck = await getUpdateStatus({ query: this.soql, fieldName: header });
-                                            this.isUpdatableMap[header] = isUpdateCheck;
+
                                         }
                                     } catch (error) {
                                     }
@@ -349,6 +381,8 @@ export default class DynamicDataTable extends LightningElement {
                     this.tableDataPn = [...this.tableDataPn, ...this.tableDataQuery];
                     this.tableDataPn = ensureObjectsWithNullProperties(this.tableDataPn);
                     this.isLoaded = false;
+                    console.log('table header ::',this.tableHeaders);
+                    console.log('table header label ::',this.tableHeaderLabel);
                     this.isLoading = false;
                     this.scrolled = false;
                     if (this.stopColumnRender == true) {
@@ -366,6 +400,7 @@ export default class DynamicDataTable extends LightningElement {
 
 
     renderedCallback() {
+
         if (this.tableDataPn && this.tableDataPn.length > 0 && !this.stopColumnRender) {
             this.populateTableBody();
         }
@@ -431,13 +466,13 @@ export default class DynamicDataTable extends LightningElement {
                     tr.appendChild(checkboxCell);
                 }
 
-
                 this.tableHeaders.forEach((header, index) => {
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.setAttribute('readonly', true);
                     input.style.border = 'none';
                     input.style.width = 'auto';
+                    input.style.outline = 'none';
                     const td = document.createElement('td');
                     td.dataset.type = this.fieldTypeMap[header];
 
@@ -451,17 +486,97 @@ export default class DynamicDataTable extends LightningElement {
                                         link.href = '/' + row[header.split('.')[0]]['Id'];
                                         link.target = '_blank';
                                         link.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                        td.dataset.lookup = 'LOOKUPNAME';
+                                        td.dataset.header = header;
+                                        td.dataset.id = row[header.split('.')[0]]['Id'];
+                                        td.dataset.linkid = '/' + row[header.split('.')[0]]['Id'];
                                         td.appendChild(link);
+
+                                    }
+                                    else if (!this.isUpdatableMap[header]) {
+                                        if(typeof row[header.split('.')[0]][header.split('.')[1]] == 'object'){
+                                            // console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
+                                             td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '' ).join(',');
+                                             td.dataset.header = header;
+                                             td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
+                                            }
+                                            else{
+                                                td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                        td.dataset.header = header;
+                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                            }
+                                        
+                                    }
+                                    else if (this.fieldTypeMap[header] == 'DATE') {
+                                        if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
+                                            const date = new Date(row[header.split('.')[0]][header.split('.')[1]]);
+                                            const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                            td.textContent = formattedDate;
+                                        }
+                                        else {
+                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                        }
+                                        td.dataset.header = header;
+                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                        td.dataset.id = row[header.split('.')[0]]['Id'];
+
+                                    }
+                                    else if (this.fieldTypeMap[header] == 'DATETIME') {
+
+                                        if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
+                                            const date = new Date(row[header.split('.')[0]][header.split('.')[1]]);
+                                            const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                            let hours = date.getHours();
+                                            const minutes = date.getMinutes().toString().padStart(2, '0');
+                                            const ampm = hours >= 12 ? 'PM' : 'AM';
+                                            hours = hours % 12;
+                                            hours = hours ? hours : 12;
+                                            const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                                            const formattedDateTime = `${formattedDate} ${formattedTime}`;
+                                            td.textContent = formattedDateTime;
+                                        }
+                                        else {
+
+                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                        }
+                                        td.dataset.header = header;
+                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                        td.dataset.id = row[header.split('.')[0]]['Id'];
+
+                                    }
+                                    else if (this.fieldTypeMap[header] == 'PICKLIST') {
+
+                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                        td.dataset.header = header;
+                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+
+                                        td.dataset.id = row[header.split('.')[0]]['Id'];
+
+                                    }
+                                    else if (this.fieldTypeMap[header] == 'BOOLEAN') {
+                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                        td.dataset.header = header;
+                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+
+                                        td.dataset.id = row[header.split('.')[0]]['Id'];
                                     }
                                     else {
-                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+
+                                        if (this.isUpdatableMap[header]) {
+                                            input.value = row[header.split('.')[0]][header.split('.')[1]];
+                                            td.dataset.header = header;
+                                            td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                            td.dataset.id = row[header.split('.')[0]]['Id'];
+                                        }
+
                                     }
+
                                 }
                                 else {
                                     td.textContent = '';
                                 }
-
                             }
+
                             else if (header == 'Name' || header == 'CaseNumber') {
                                 const link = document.createElement('a');
                                 link.textContent = row[header];
@@ -471,9 +586,25 @@ export default class DynamicDataTable extends LightningElement {
 
                             }
                             else if ((!this.isUpdatableMap[header] && header !== 'Name') || (this.isUpdatableMap[header] && isId(row[header]) && header !== 'Name')) {
+                               console.log('update here');
+                               console.log('row data ::',row[header]);
+                            //    console.log('row data ::',Object.values(row[header]));
+                               console.log('type od data ::',typeof row[header]);
+                               if(typeof row[header] == 'object'){
+                                console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
+                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
+                                td.dataset.header = header;
+                                td.dataset.value = Object.values(row[header]);
+                               }
+                               else{
                                 td.textContent = row[header] == undefined ? '' : row[header];
+                                td.dataset.header = header;
+                                td.dataset.value = row[header];
+                               }
+                                
                             }
                             else {
+                                console.log('entered here:');
                                 if (this.fieldTypeMap[header] == 'BOOLEAN' && this.isUpdatableMap[header]) {
                                     td.textContent = row[header];
                                     td.dataset.header = header;
@@ -492,9 +623,9 @@ export default class DynamicDataTable extends LightningElement {
                                         const date = new Date(row[header]);
                                         const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
                                         td.textContent = formattedDate;
-
                                     }
                                     else {
+
                                         td.textContent = row[header];
                                     }
 
@@ -506,10 +637,8 @@ export default class DynamicDataTable extends LightningElement {
 
                                     if (row[header] !== null) {
                                         const date = new Date(row[header]);
-
                                         const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
                                         let hours = date.getHours();
-
                                         const minutes = date.getMinutes().toString().padStart(2, '0');
                                         const ampm = hours >= 12 ? 'PM' : 'AM';
                                         hours = hours % 12;
@@ -517,18 +646,15 @@ export default class DynamicDataTable extends LightningElement {
                                         const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
                                         const formattedDateTime = `${formattedDate} ${formattedTime}`;
                                         td.textContent = formattedDateTime;
-
                                     }
                                     else {
                                         td.textContent = row[header];
                                     }
-
-
                                     td.dataset.header = header;
                                     td.dataset.value = row[header];
                                 }
+                               
                                 else if (this.fieldTypeMap[header] == 'TEXTAREA') {
-
                                     if (row[header] == null) {
                                         td.innerHTML = '';
                                     }
@@ -538,15 +664,20 @@ export default class DynamicDataTable extends LightningElement {
                                         }
                                         else {
                                             td.textContent = row[header];
-
                                         }
                                     }
-
-
-
-
                                 }
+                                else if(this.fieldTypeMap[header] == 'ADDRESS'){
+                                    console.log('entered in address::');
+                                    
+                                        console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
+                                        td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
+                                        td.dataset.header = header;
+                                        td.dataset.value = Object.values(row[header]);
+                                       
+                                }                            
                                 else {
+                                    console.log('normal');
                                     input.value = row[header] == undefined ? '' : row[header];
                                     td.dataset.header = header;
                                     td.dataset.value = row[header];
@@ -570,7 +701,6 @@ export default class DynamicDataTable extends LightningElement {
                                 else {
                                     td.textContent = '';
                                 }
-
                             }
                             else if (header == 'Name') {
                                 const link = document.createElement('a');
@@ -597,18 +727,27 @@ export default class DynamicDataTable extends LightningElement {
                             }
                         }
                         else {
-                            td.textContent = row[header] == undefined ? '' : row[header];
+                            if(typeof row[header] == 'object'){
+                                console.log('object');
+                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
+                            }
+                            else{
+                                td.textContent = row[header] == undefined ? '' : row[header];
+                            }
+                            
                         }
                     }
                     else {
                         td.textContent = row[header] == undefined ? '' : row[header];
                     }
-                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA')) {
+                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA' || header.split('.')[1] == 'Name' || this.fieldTypeMap[header] == 'REFERENCE')) {//|| this.fieldTypeMap[header] == 'CURRENCY'
                         td.appendChild(input);
                     }
+
                     if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
                         td.appendChild(input);
                     }
+
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
@@ -617,92 +756,26 @@ export default class DynamicDataTable extends LightningElement {
             this.tableData = false;
             this.tableDataErrorMsg = 'There is some issue while populating data in the table';
         }
-
     }
 
 
     // Handle Id column visibility toggle
     handleIdColumn(event) {
-        if (this.visibleData.length === 0) {
-            event.preventDefault();
-            event.target.checked = this.toggleIdColumn;
-            return;
-        }
-        else if (this.visibleData.length !== 0 && this.checkForFilteredList == true) {
-            event.preventDefault();
-            event.target.checked = this.toggleIdColumn;
-            return;
-        }
-
-
-        if (this.visibleData.length > 0 && this.filteredData.length > 0) {
-            this.toggleIdColumn = !this.toggleIdColumn;
-            this.showSubmit = false;
-            this.editedIds = [];
-            this.isIdColumnVisible = !this.isIdColumnVisible;
-
-            if (this.toggleIdColumn == false) {
-                this.tableHeaders = this.tableHeaders.filter(header => !this.tableHeaderToRemove.includes(header));
-                this.tableHeaderLabel = this.tableHeaderLabel.filter(header => !this.tableHeaderLabelToRemove.includes(header));
-                this.stopColumnRender == true;
-                this.populateTableBody2(this.filteredData);
-            }
-            else {
-                this.tableHeaderLabel = this.tableHeaderLabel.concat(this.tableHeaderLabelToRemove);
-                this.tableHeaders = this.tableHeaders.concat(this.tableHeaderToRemove);
-                this.stopColumnRender == true;
-                this.populateTableBody2(this.filteredData);
-            }
-        }
-        else {
-            this.toggleIdColumn = !this.toggleIdColumn;
-            this.showSubmit = false;
-            this.editedIds = [];
-            this.isIdColumnVisible = !this.isIdColumnVisible;
-            if (this.toggleIdColumn == false) {
-                this.tableHeaders = this.tableHeaders.filter(header => !this.tableHeaderToRemove.includes(header));
-                this.tableHeaderLabel = this.tableHeaderLabel.filter(header => !this.tableHeaderLabelToRemove.includes(header));
-                this.stopColumnRender == true;
-                this.populateTableBody2(this.visibleData);
-            }
-            else {
-                this.tableHeaderLabel = this.tableHeaderLabel.concat(this.tableHeaderLabelToRemove);
-                this.tableHeaders = this.tableHeaders.concat(this.tableHeaderToRemove);
-                this.stopColumnRender == true;
-                this.populateTableBody2(this.visibleData);
-            }
-        }
+        handleIdColumn.bind(this)(event, this);
     }
+
 
     // To check whether scroll bar is in bottom.
     isScrolledToBottom(scrollableElement) {
-        return scrollableElement.scrollHeight - scrollableElement.scrollTop === scrollableElement.clientHeight || scrollableElement.scrollHeight - scrollableElement.scrollTop === scrollableElement.clientHeight + 1;
+        return Math.round(scrollableElement.scrollHeight - scrollableElement.scrollTop) === scrollableElement.clientHeight || Math.round(scrollableElement.scrollHeight - scrollableElement.scrollTop) === scrollableElement.clientHeight + 1;
     }
 
     // Handle scrolling in the data table for infinite loading
     handleScroll(event) {
-        if (event.target.scrollTop !== 0) {
-            if (this.isScrolledToBottom(event.target) && !this.scrolled) {
-
-                this.scrolled = true;
-                if (this.enableInfiniteLoading) {
-                    this.showSubmit = false;
-                    this.editedIds = [];
-                    const allArrowIcons = this.template.querySelectorAll('lightning-icon');
-                    allArrowIcons.forEach(icon => {
-                        icon.classList.remove('arrowIconShow');
-                    });
-                    const inputElement = this.template.querySelector('[data-id="searchInput"]');
-                    inputElement.value = '';
-                    this.showInput = false;
-                    this.loadMoreData();
-                }
-
-            }
-        }
-
-
+        handleScroll.bind(this)(event, this.isScrolledToBottom, this.enableInfiniteLoading, this.template, this.scrolled,
+            this);
     }
+
 
     // Load more data when scrolled to the bottom
     loadMoreData() {
@@ -714,147 +787,17 @@ export default class DynamicDataTable extends LightningElement {
 
     // Handle sorting of data by column
     handleSort(event) {
-        if (this.dataToSort.length > 0) {
-            this.showSubmit = false;
-            this.editedIds = [];
-            this.selectedHeaderId = event.currentTarget.dataset.id;
-            this.activeHeader = this.selectedHeaderId;
-            this.sortedBy = event.currentTarget.dataset.id;
-            this.sortedDirection = event.currentTarget.dataset.set;
-
-            if (this.soql) {
-                const sortedArray = this.sortData(this.relatedLabelMap[this.sortedBy], this.sortedDirection, this.selectedHeaderId);
-                this.populateTableBody2(sortedArray);
-            }
-            else {
-                const sortedArray = this.sortData(this.sortedBy, this.sortedDirection, this.selectedHeaderId);
-                this.populateTableBody2(sortedArray);
-            }
-        }
+        handleSort.bind(this)(event, this.dataToSort, this.showSubmit, this.editedIds, this.selectedHeaderId, this.activeHeader, this.sortedBy, this.sortedDirection, this.soql, this.relatedLabelMap, this.template, this);
     }
 
-    // Sorts data based on the given field and direction
-    sortData(field, direction, selectedField) {
-        const allArrowIcons = this.template.querySelectorAll('lightning-icon');
-        allArrowIcons.forEach(icon => {
-            icon.classList.remove('arrowIconShow');
-        });
-
-        if (direction == 'desc') {
-            const tableHeader = this.template.querySelector(`th[data-id="${selectedField}"]`);
-            const arrowIcon = tableHeader.querySelector('lightning-icon');
-            arrowIcon.iconName = 'utility:arrowup';
-            arrowIcon.classList.add('arrowIconShow');
-            tableHeader.setAttribute('data-set', 'asc')
-            const a = [...this.dataToSort]
-            a.sort((a, b) => {
-                if (field.includes('.')) {
-                    if (typeof a[field.split('.')[0]][field.split('.')[1]] == 'string' && typeof b[field.split('.')[0]][field.split('.')[1]] == 'string') {
-                        return a[field.split('.')[0]][field.split('.')[1]].toLowerCase() > b[field.split('.')[0]][field.split('.')[1]].toLowerCase() ? 1 : -1;
-                    }
-                    else if (a[field.split('.')[0]][field.split('.')[1]] == null && b[field.split('.')[0]][field.split('.')[1]] == null) {
-                        return -1;
-                    }
-                    else if (b[field.split('.')[0]][field.split('.')[1]] == null && typeof a[field.split('.')[0]][field.split('.')[1]] == 'string') {
-                        return 1;
-                    }
-                    else if (a[field.split('.')[0]][field.split('.')[1]] == null && typeof b[field.split('.')[0]][field.split('.')[1]] == 'string') {
-                        return -1;
-                    }
-                    else {
-                        return a[field.split('.')[0]][field.split('.')[1]] > b[field.split('.')[0]][field.split('.')[1]] ? 1 : -1;
-                    }
-                }
-                else {
-                    if (typeof a[field] == 'string' && typeof b[field] == 'string') {
-                        return a[field].toLowerCase() > b[field].toLowerCase() ? 1 : -1;
-                    }
-                    else if (a[field] == null && b[field] == null) {
-                        return -1;
-                    }
-                    else if (a[field] == null && typeof b[field] == 'string') {
-                        return 1;
-                    }
-                    else if (b[field] == null && typeof a[field] == 'string') {
-                        return -1;
-                    }
-                    else {
-                        return a[field] > b[field] ? 1 : -1;
-                    }
-                }
-            }
-            );
-            return a;
-        }
-        else {
-            const tableHeader = this.template.querySelector(`th[data-id="${selectedField}"]`);
-            const arrowIcon = tableHeader.querySelector('lightning-icon');
-            arrowIcon.iconName = 'utility:arrowdown';
-            arrowIcon.classList.add('arrowIconShow');
-            tableHeader.setAttribute('data-set', 'desc');
-            const a = [...this.dataToSort]
-            a.sort((a, b) => {
-                if (field.includes('.')) {
-                    if (typeof a[field.split('.')[0]][field.split('.')[1]] == 'string' && typeof b[field.split('.')[0]][field.split('.')[1]] == 'string') {
-                        return a[field.split('.')[0]][field.split('.')[1]].toLowerCase() < b[field.split('.')[0]][field.split('.')[1]].toLowerCase() ? 1 : -1;
-                    }
-                    else if (a[field.split('.')[0]][field.split('.')[1]] == null && b[field.split('.')[0]][field.split('.')[1]] == null) {
-                        return -1;
-                    }
-                    else if (b[field.split('.')[0]][field.split('.')[1]] == null && typeof a[field.split('.')[0]][field.split('.')[1]] == 'string') {
-                        return -1;
-                    }
-                    else if (a[field.split('.')[0]][field.split('.')[1]] == null && typeof b[field.split('.')[0]][field.split('.')[1]] == 'string') {
-                        return 1;
-                    }
-                    else {
-                        return a[field.split('.')[0]][field.split('.')[1]] < b[field.split('.')[0]][field.split('.')[1]] ? 1 : -1;
-                    }
-                }
-                else {
-                    if (typeof a[field] == 'string' && typeof b[field] == 'string') {
-                        return a[field].toLowerCase() < b[field].toLowerCase() ? 1 : -1
-                    }
-                    else if (a[field] == null && b[field] == null) {
-                        return -1;
-                    }
-                    else if (a[field] == null && typeof b[field] == 'string') {
-                        return -1;
-                    }
-                    else if (b[field] == null && typeof a[field] == 'string') {
-                        return 1;
-                    }
-                    else {
-                        return a[field] < b[field] ? 1 : -1
-                    }
-                }
-            });
-            return a;
-        }
-    }
     // Handle the start of a drag event for column header
     handleDragStart(event) {
-        this.showSubmit = false;
-        this.editedIds = [];
-        event.dataTransfer.setData('text', event.target.dataset.index);
-        const inputField = this.template.querySelector('lightning-input');
-        inputField.value = '';
+        handleDragStart.bind(this)(event, this.showSubmit, this.editedIds, this.template, this);
     }
-    // Handle the drop position for column header
+
+    // Handle the drop event for column header
     handleDrop(event) {
-        const fromIndex = event.dataTransfer.getData('text');
-        const toIndex = event.currentTarget.dataset.index;
-
-        if (fromIndex !== toIndex) {
-            this.tableHeaders.splice(toIndex, 0, this.tableHeaders.splice(fromIndex, 1)[0]);
-            this.tableHeaders = [...this.tableHeaders];
-
-            if (this.tableHeaderLabel.length > 0) {
-                this.tableHeaderLabel.splice(toIndex, 0, this.tableHeaderLabel.splice(fromIndex, 1)[0]);
-                this.tableHeaderLabel = [...this.tableHeaderLabel];
-            }
-            this.populateTableBody();
-        }
+        handleDrop.bind(this)(event, this.tableHeaders, this.tableHeaderLabel, this);
     }
 
     handleDragOver(event) {
@@ -872,63 +815,11 @@ export default class DynamicDataTable extends LightningElement {
 
     // Handle global search
     handleKeyUp(event) {
-        const allArrowIcons = this.template.querySelectorAll('lightning-icon');
-        allArrowIcons.forEach(icon => {
-            icon.classList.remove('arrowIconShow');
-        });
-        this.showInput = false;
-        this.showSubmit = false;
-        this.editedIds = [];
-        var inputText = event.target.value;
-        this.visibleData = this.searchTable(inputText);
-        this.globalSearchCloseFilterData = this.searchTable(inputText);
-        this.dataToSort = this.visibleData;
+        handleKeyUp.bind(this)(event, this.template, this.showInput, this.showSubmit, this.editedIds, this.visibleData, this.globalSearchCloseFilterData, this.dataToSort, this.tableDataPn, this.tableHeaders, this.stopColumnRender,
+            this.checkForFilteredList, this.filteredData, this.totalRecords, this);
 
-
-        if (this.visibleData == '') {
-            this.stopColumnRender = true;
-            this.checkForFilteredList = false;
-            this.filteredData = [];
-            const tbody = this.template.querySelector('tbody');
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No data available</td></tr>';
-            this.totalRecords = 0;
-        }
-        else {
-            var text = this.template.querySelector('h3');
-            text.textContent = '';
-            this.stopColumnRender = true;
-            this.filteredData = [];
-            this.checkForFilteredList = false;
-            this.populateTableBody2(this.visibleData);
-        }
     }
 
-
-    // Search through table data and return filtered results based on the search input
-    searchTable(data) {
-        data = data.toLowerCase();
-        var filteredData = [];
-        this.tableDataPn.some((item) => {
-            let matchFound = false;
-            this.tableHeaders.some((head) => {
-
-                if (!head.includes('.') && String(item[head]).toLowerCase().includes(data)) {
-                    filteredData.push(item);
-                    matchFound = true;
-                    return matchFound;
-                }
-                else if (item[head.split('.')[0]] !== undefined) {
-                    if (head.includes('.') && String(item[head.split('.')[0]][head.split('.')[1]]).toLowerCase().includes(data)) {
-                        filteredData.push(item);
-                        matchFound = true;
-                        return matchFound;
-                    }
-                }
-            })
-
-        })
-        return filteredData;
-    }
 
     // Function to populate the table body with given data
     populateTableBody2(data) {
@@ -960,8 +851,6 @@ export default class DynamicDataTable extends LightningElement {
                 this.isMainCheckboxChecked = true;
             }
 
-
-
             const tr = document.createElement('tr');
             tr.addEventListener('dblclick', (event) => this.handleDoubleClick(event));
 
@@ -974,8 +863,6 @@ export default class DynamicDataTable extends LightningElement {
 
             tr.appendChild(hiddenIdCell);
 
-
-
             if (this.checkBoxVisibile) {
                 const checkboxCell = document.createElement('td');
                 const checkboxInput = document.createElement('input');
@@ -986,7 +873,6 @@ export default class DynamicDataTable extends LightningElement {
                 if (this.selectedRows.some(selectedRow => forAnyId(selectedRow) === forAnyId(row))) {
                     checkboxInput.checked = true;
                 }
-
 
                 checkboxCell.appendChild(checkboxInput);
                 tr.appendChild(checkboxCell);
@@ -1000,6 +886,7 @@ export default class DynamicDataTable extends LightningElement {
                 input.setAttribute('readonly', true);
                 input.style.border = 'none';
                 input.style.width = 'auto';
+                input.style.outline = 'none';
                 const td = document.createElement('td');
                 td.dataset.type = this.fieldTypeMap[header];
 
@@ -1012,18 +899,89 @@ export default class DynamicDataTable extends LightningElement {
                                     link.href = '/' + row[header.split('.')[0]]['Id'];
                                     link.target = '_blank';
                                     link.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.lookup = 'LOOKUPNAME';
+                                    td.dataset.header = header;
+                                    td.dataset.linkid = '/' + row[header.split('.')[0]]['Id'];
+                                    td.dataset.id = row[header.split('.')[0]]['Id'];
                                     td.appendChild(link);
                                 }
-                                else {
+                                else if (!this.isUpdatableMap[header]) {
+                                    if(typeof row[header.split('.')[0]][header.split('.')[1]] == 'object'){
+                                        // console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
+                                         td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '' ).join(',');
+                                         td.dataset.header = header;
+                                         td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
+                                        }
+                                        else{
+                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                            td.dataset.header = header;
+                                            td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                        }
+                                   
+                                }
+                                else if (this.fieldTypeMap[header] == 'DATE') {
+
+                                    if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
+                                        const date = new Date(row[header.split('.')[0]][header.split('.')[1]]);
+                                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                        td.textContent = formattedDate;
+                                    }
+                                    else {
+                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                    }
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.id = row[header.split('.')[0]]['Id'];
+                                }
+                                else if (this.fieldTypeMap[header] == 'DATETIME') {
+                                    if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
+                                        const date = new Date(row[header.split('.')[0]][header.split('.')[1]]);
+                                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                        let hours = date.getHours();
+                                        const minutes = date.getMinutes().toString().padStart(2, '0');
+                                        const ampm = hours >= 12 ? 'PM' : 'AM';
+                                        hours = hours % 12;
+                                        hours = hours ? hours : 12;
+                                        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                                        const formattedDateTime = `${formattedDate} ${formattedTime}`;
+                                        td.textContent = formattedDateTime;
+                                    }
+                                    else {
+                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                    }
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.id = row[header.split('.')[0]]['Id'];
+                                }
+                                else if (this.fieldTypeMap[header] == 'PICKLIST') {
                                     td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.id = row[header.split('.')[0]]['Id'];
+                                }
+                                else if (this.fieldTypeMap[header] == 'BOOLEAN') {
+                                    td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.id = row[header.split('.')[0]]['Id'];
+                                }
+                                else if(this.fieldTypeMap[header] == 'ADDRESS'){
+                                    td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '' ).join(',');
+                                    td.dataset.header = header;
+                                    td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
+                                }
+                                else {
+                                    input.value = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                    td.dataset.id = row[header.split('.')[0]]['Id'];
                                 }
                             }
                             else {
                                 td.textContent = '';
                             }
-
                         }
-                        else if (header == 'Name') {
+                        else if (header == 'Name' || header == 'CaseNumber') {
                             const link = document.createElement('a');
                             link.textContent = row[header];
                             link.href = '/' + row.Id;
@@ -1031,14 +989,23 @@ export default class DynamicDataTable extends LightningElement {
                             td.appendChild(link);
                         }
                         else if ((!this.isUpdatableMap[header] && header !== 'Name') || (this.isUpdatableMap[header] && isId(row[header]) && header !== 'Name')) {
+                            if(typeof row[header] == 'object'){
+                               // console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
+                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
+                                td.dataset.header = header;
+                                td.dataset.value = Object.values(row[header]);
+                               }
+                          else{
                             td.textContent = row[header] == undefined ? '' : row[header];
+                            td.dataset.header = header;
+                            td.dataset.value = row[header];
+                          }
+                            
                         }
                         else {
                             if (this.fieldTypeMap[header] == 'BOOLEAN' && this.isUpdatableMap[header]) {
                                 td.textContent = row[header];
                                 td.dataset.header = header;
-
-
                             }
                             else if (this.fieldTypeMap[header] == 'PICKLIST') {
                                 td.dataset.value = row[header];
@@ -1047,18 +1014,14 @@ export default class DynamicDataTable extends LightningElement {
                             }
 
                             else if (this.fieldTypeMap[header] == 'DATE') {
-
                                 if (row[header] !== null) {
                                     const date = new Date(row[header]);
                                     const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
                                     td.textContent = formattedDate;
-
                                 }
                                 else {
                                     td.textContent = row[header];
                                 }
-
-
                                 td.dataset.header = header;
                                 td.dataset.value = row[header];
                             }
@@ -1066,10 +1029,8 @@ export default class DynamicDataTable extends LightningElement {
 
                                 if (row[header] !== null) {
                                     const date = new Date(row[header]);
-
                                     const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
                                     let hours = date.getHours();
-
                                     const minutes = date.getMinutes().toString().padStart(2, '0');
                                     const ampm = hours >= 12 ? 'PM' : 'AM';
                                     hours = hours % 12;
@@ -1077,18 +1038,14 @@ export default class DynamicDataTable extends LightningElement {
                                     const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
                                     const formattedDateTime = `${formattedDate} ${formattedTime}`;
                                     td.textContent = formattedDateTime;
-
                                 }
                                 else {
                                     td.textContent = row[header];
                                 }
-
-
                                 td.dataset.header = header;
                                 td.dataset.value = row[header];
                             }
                             else if (this.fieldTypeMap[header] == 'TEXTAREA') {
-
                                 if (row[header] == null) {
                                     td.innerHTML = '';
                                 }
@@ -1098,15 +1055,14 @@ export default class DynamicDataTable extends LightningElement {
                                     }
                                     else {
                                         td.textContent = row[header];
-
                                     }
                                 }
-
-
-
-
                             }
-
+                            else if(this.fieldTypeMap[header] == 'ADDRESS'){
+                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
+                                td.dataset.header = header;
+                                td.dataset.value = Object.values(row[header]);
+                            }
 
                             else {
                                 input.value = row[header] == undefined ? '' : row[header];
@@ -1163,8 +1119,7 @@ export default class DynamicDataTable extends LightningElement {
                     td.textContent = row[header] == undefined ? '' : row[header];
                 }
 
-
-                if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA')) {
+                if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA' || header.split('.')[1] == 'Name')) {
                     td.appendChild(input);
                 }
                 if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
@@ -1172,12 +1127,9 @@ export default class DynamicDataTable extends LightningElement {
                 }
                 tr.appendChild(td);
             });
-
             tbody.appendChild(tr);
         });
     }
-
-
 
     // Stopping the table to sort when searching in column filter.
     handleNotSort(event) {
@@ -1186,136 +1138,32 @@ export default class DynamicDataTable extends LightningElement {
 
     //Handle Column filter search.
     handleInputChange(event) {
-        const inputValue = event.target.value.toLowerCase();
-        let currentHeader = event.currentTarget.dataset.id;
+        handleInputChange.bind(this)(event, this.soql, this.relatedLabelMap, this.columnFilters, this.filteredData, this.visibleData,
+            this.dataToSort, this.stopColumnRender, this.checkForFilteredList, this, this.template, this.totalRecords, this.showSubmit,
+            this.editedIds);
 
-        if (this.soql) {
-            currentHeader = this.relatedLabelMap[currentHeader];
-        }
-        this.columnFilters[currentHeader] = inputValue;
-        this.filteredData = [...this.visibleData];
-        for (const header in this.columnFilters) {
-            const filterValue = this.columnFilters[header];
-            if (header.includes('.')) {
-                this.filteredData = this.filteredData.filter(item => {
-                    if (item[header.split('.')[0]] !== undefined && item[header.split('.')[0]][header.split('.')[1]] !== undefined) {
-                        return String(item[header.split('.')[0]][header.split('.')[1]]).toLowerCase().includes(filterValue)
-                    }
-                    else if (filterValue == '') {
-                        return this.visibleData;
-                    }
-                });
-            }
-            else {
-                this.filteredData = this.filteredData.filter(item =>
-                    String(item[header]).toLowerCase().includes(filterValue)
-                );
-            }
-        }
-        this.dataToSort = this.filteredData;
-        let isEmpty = Object.values(this.columnFilters).every(value => value === '');
-        if (isEmpty) {
-            this.stopColumnRender = true;
-            this.checkForFilteredList = false;
-            this.populateTableBody2(this.filteredData);
-        }
-        else {
-            if (this.filteredData.length === 0) {
-                this.stopColumnRender = true;
-                const tbody = this.template.querySelector('tbody');
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No data available</td></tr>';
-                this.totalRecords = 0;
-                this.checkForFilteredList = true;
-            } else {
-                this.stopColumnRender = true;
-                this.checkForFilteredList = false;
-                this.populateTableBody2(this.filteredData);
-            }
-        }
     }
 
     //Reset the table to its original state, clearing filters and selections
     handleReset() {
-        const inputElement = this.template.querySelector('[data-id="searchInput"]');
-        inputElement.value = '';
-        const checkboxes = this.template.querySelectorAll('input[type="checkbox"]');
-
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        this.selectedRows = [];
-
-        const allArrowIcons = this.template.querySelectorAll('lightning-icon');
-        allArrowIcons.forEach(icon => {
-            icon.classList.remove('arrowIconShow');
-
-        });
-        this.showInput = false;
-        this.showSubmit = false;
-        this.editedIds = [];
-        this.filteredData = [];
-        this.populateTableBody();
+        handleReset.bind(this)(this.template, this.selectedRows, this.showInput, this.showSubmit, this.editedIds
+            , this.filteredData, this);
     }
 
-    // Handle main checkbox selection for selecting all rows
+    // Handle single checkbox selection for selecting all rows
     handleCheckboxChange(event) {
-        const rowId = event.currentTarget.dataset.id
-        const isChecked = event.target.checked;
-        let rowData;
-
-        for (let i = 0; i < this.tableDataPn.length; i++) {
-            if (this.tableDataPn[i].Id == rowId || this.tableDataPn[i].id == rowId || this.tableDataPn[i].ID == rowId) {
-                rowData = this.tableDataPn[i];
-                break;
-            }
-        }
-
-        if (isChecked) {
-            this.selectedRows.push(rowData);
-            if (this.selectedRows.length === this.visibleData.length) {
-                this.isMainCheckboxChecked = true;
-            }
-        }
-        else {
-            this.isMainCheckboxChecked = false;
-            const index = this.selectedRows.findIndex(item => item === rowData);
-            if (index !== -1) {
-                this.selectedRows.splice(index, 1);
-            }
-        }
-
-        this.output = JSON.stringify(this.selectedRows);
-
+        handleCheckboxChange.bind(this)(event, this.tableDataPn, this.selectedRows, this.visibleData, this, this.isMainCheckboxChecked,
+            this.output
+        );
     }
 
-    // Handle single checkbox selection for selecting the rows
+    // Handle main checkbox selection for selecting the rows  
     checkAllCheckboxes(event) {
-        const clicked = event.target.checked;
-        this.isMainCheckboxChecked = clicked;
-        const checkboxes = this.template.querySelectorAll('tbody input[type="checkbox"]');
-
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = clicked;
-            const rowId = checkbox.dataset.id;
-
-            if (clicked) {
-                const rowData = this.tableDataPn.find(row => row.Id == rowId || row.id == rowId || row.ID == rowId);
-                if (rowData && !this.selectedRows.includes(rowData)) {
-                    this.selectedRows.push(rowData);
-                }
-
-            } else {
-                const index = this.selectedRows.findIndex(row => row.Id == rowId || row.id == rowId || row.ID == rowId);
-                if (index !== -1) {
-                    this.selectedRows.splice(index, 1);
-                }
-            }
-        });
-        this.output = JSON.stringify(this.selectedRows);
+        checkAllCheckboxes.bind(this)(event, this, this.isMainCheckboxChecked, this.template, this.tableDataPn, this.selectedRows,
+            this.output
+        );
     }
 
-
-    // Getting header name of column.
     handleHeaderName(event) {
         this.stopColumnRender = true;
         this.showHeaderName = event.currentTarget.textContent;
@@ -1343,22 +1191,20 @@ export default class DynamicDataTable extends LightningElement {
         }
     }
 
+    // Handle to submit the records
     handleGoNext() {
         this.submitData();
-
     }
 
-
+    // Function to make cell editable according to their type
     async handleDoubleClick(event) {
-
         const target = event.target;
-        // Handling double-click on BOOLEAN cells
-        if (target.tagName === 'TD' && target.dataset.type === 'BOOLEAN' && this.isUpdatableMap[target.dataset.header]) {
+
+        if (target.tagName === 'TD' && target.dataset.type === 'BOOLEAN' && this.isUpdatableMap[target.dataset.header] && this.inlineEditing && target.dataset.id !== '') {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = target.textContent.trim().toLowerCase() === 'true';
             const currentValue = target.textContent.trim().toLowerCase() === 'true';
-
             checkbox.addEventListener('change', (event) => {
                 target.dataset.value = event.target.checked;
                 target.dataset.edited = "true";
@@ -1366,6 +1212,7 @@ export default class DynamicDataTable extends LightningElement {
                     target.textContent = currentValue;
                     target.dataset.edited = "false";
                 }
+
                 const tr = target.closest('tr');
                 let isAnyFieldEdited = false;
                 tr.querySelectorAll('td').forEach(td => {
@@ -1375,6 +1222,7 @@ export default class DynamicDataTable extends LightningElement {
                 });
                 const hiddenIdCell = tr.querySelector('td:first-child');
                 const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+
                 if (hiddenId) {
                     if (!this.editedIds.includes(hiddenId.value)) {
                         this.editedIds.push(hiddenId.value);
@@ -1391,10 +1239,11 @@ export default class DynamicDataTable extends LightningElement {
                         }
                     }
                 }
+
             });
 
-              // Event listener for outside click to revert changes if necessary
             document.addEventListener('click', function handleOutsideClick(event) {
+
                 if (!checkbox.contains(event.target) && !target.contains(event.target)) {
                     if (checkbox.checked == currentValue) {
                         target.textContent = currentValue;
@@ -1404,23 +1253,34 @@ export default class DynamicDataTable extends LightningElement {
             });
             target.innerHTML = '';
             target.appendChild(checkbox);
+
         }
-           // Handling double-click on PICKLIST cells
-        else if (target.tagName === 'TD' && target.dataset.type === 'PICKLIST') {
+        else if (target.tagName === 'TD' && target.dataset.type === 'PICKLIST' && this.inlineEditing && target.dataset.id !== '') {
             let currentValue = target.dataset.value;
             const headerValue = target.dataset.header;
-            let pickListOptions = await getPicklistValue({ query: this.soql, field: headerValue });
+            let pickListOptions
+            if (headerValue.includes('.')) {
+                let head = headerValue.split('.');
+
+                pickListOptions = await getRelatedPicklistValue({ objectName: head[0], field: head[1] });
+
+            }
+            else {
+                pickListOptions = await getPicklistValue({ query: this.soql, field: headerValue });
+            }
+
             const select = document.createElement('select');
             let originalOptions = pickListOptions;
-            let options = [...originalOptions];
 
-            if (currentValue == 'null') {
+            let options = [...originalOptions];
+            if (currentValue == 'null' || currentValue == '') {
                 currentValue = '--None--';
             }
 
             if (!options.includes('--None--')) {
                 options.unshift('--None--');
             }
+
 
             options.forEach(option => {
                 const optionElement = document.createElement('option');
@@ -1431,14 +1291,13 @@ export default class DynamicDataTable extends LightningElement {
                 }
                 select.appendChild(optionElement);
             });
-            // Event listener for select change
+
             select.addEventListener('change', (event) => {
                 target.dataset.value = event.target.value;
                 const selectedValue = event.target.value;
                 target.dataset.edited = "true";
 
                 if (selectedValue === '--None--' && currentValue === '--None--') {
-
                     target.textContent = '';
                     target.dataset.edited = "false";
                 }
@@ -1448,6 +1307,7 @@ export default class DynamicDataTable extends LightningElement {
                     target.style.border = '';
 
                 }
+
                 this.pickListChange = target.dataset.edited;
                 const tr = target.closest('tr');
                 const hiddenIdCell = tr.querySelector('td:first-child');
@@ -1479,8 +1339,8 @@ export default class DynamicDataTable extends LightningElement {
                     }
                 }
             });
+
             const self = this;
-             // Event listener for outside click to revert changes if necessary
             document.addEventListener('click', function handleOutsideClick(event) {
                 if (!select.contains(event.target) && !target.contains(event.target)) {
                     if (!self.requiredFieldMap[headerValue]) {
@@ -1508,8 +1368,8 @@ export default class DynamicDataTable extends LightningElement {
             target.textContent = '';
             target.appendChild(select);
         }
-         // Handling double-click on DATE cells
-        else if (target.tagName === 'TD' && target.dataset.type === 'DATE') {
+
+        else if (target.tagName === 'TD' && target.dataset.type === 'DATE' && this.inlineEditing && target.dataset.id !== ''  ) {
             const input = document.createElement('input');
             input.type = 'date';
             let currentDate = target.textContent.trim();
@@ -1517,7 +1377,6 @@ export default class DynamicDataTable extends LightningElement {
                 const [month, day, year] = currentDate.split('/');
                 currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
             }
-
             input.value = currentDate;
             input.style.width = '100%';
             const currentValue = target.textContent.trim()
@@ -1525,6 +1384,7 @@ export default class DynamicDataTable extends LightningElement {
             input.addEventListener('change', (event) => {
                 target.dataset.value = event.target.value;
                 target.dataset.edited = "true";
+
                 if (event.target.value == currentDate) {
                     target.textContent = currentValue;
                     target.dataset.edited = "false";
@@ -1536,6 +1396,7 @@ export default class DynamicDataTable extends LightningElement {
                         isAnyFieldEdited = true;
                     }
                 });
+
                 const hiddenIdCell = tr.querySelector('td:first-child');
                 const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
                 if (hiddenId) {
@@ -1549,14 +1410,15 @@ export default class DynamicDataTable extends LightningElement {
                         if (index !== -1) {
                             this.editedIds.splice(index, 1);
                         }
+
                         if (this.editedIds.length == 0) {
                             this.showSubmit = false;
                         }
                     }
                 }
             });
-            // Event listener for outside click to revert changes if necessary
             document.addEventListener('click', function handleOutsideClick(event) {
+
                 if (!input.contains(event.target) && !target.contains(event.target)) {
                     let conInputDate = input.value;
                     if (conInputDate) {
@@ -1572,13 +1434,11 @@ export default class DynamicDataTable extends LightningElement {
             target.textContent = '';
             target.appendChild(input);
         }
-         // Handling double-click on DATETIME cells
-        else if (target.tagName === 'TD' && target.dataset.type === 'DATETIME') {
 
+        else if (target.tagName === 'TD' && target.dataset.type === 'DATETIME' && this.inlineEditing && target.dataset.id !== '') {
             const input = document.createElement('input');
             input.type = 'datetime-local';
             let currentDate = target.textContent.trim();
-
             if (currentDate) {
                 const [datePart, timePart, period] = currentDate.split(' ');
                 const [month, day, year] = datePart.split('/');
@@ -1590,11 +1450,9 @@ export default class DynamicDataTable extends LightningElement {
                 }
                 currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes.padStart(2, '0')}`;
             }
-
             input.value = currentDate;
             input.style.width = '100%';
             const currentValue = target.textContent.trim()
-            // Event listener for datetime input change
             input.addEventListener('change', (event) => {
                 target.dataset.value = event.target.value;
                 target.dataset.edited = "true";
@@ -1603,7 +1461,6 @@ export default class DynamicDataTable extends LightningElement {
                     target.dataset.edited = "false";
                 }
                 const tr = target.closest('tr');
-
                 let isAnyFieldEdited = false;
                 tr.querySelectorAll('td').forEach(td => {
                     if (td.dataset.edited === "true") {
@@ -1631,7 +1488,6 @@ export default class DynamicDataTable extends LightningElement {
                 }
             });
 
-              // Event listener for outside click to revert changes if necessary
             document.addEventListener('click', function handleOutsideClick(event) {
 
                 if (!input.contains(event.target) && !target.contains(event.target)) {
@@ -1646,7 +1502,6 @@ export default class DynamicDataTable extends LightningElement {
                         hours = hours % 12;
                         hours = hours ? hours : 12;
                         conInputDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year} ${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-
                     }
                     if (conInputDate == currentValue) {
                         target.textContent = currentValue;
@@ -1654,18 +1509,15 @@ export default class DynamicDataTable extends LightningElement {
                     document.removeEventListener('click', handleOutsideClick);
                 }
             });
-
             target.textContent = '';
             target.appendChild(input);
         }
-        // Handling double-click on text input fields
-        else if (target.tagName === 'INPUT') {
+        else if (target.tagName === 'INPUT' && target.closest('td').dataset.id !== '') {
             const tdout = target.closest('td');
             let currentValue = tdout.dataset.value;
             target.readOnly = false;
             target.style.border = '1px solid black';
-
-             // Event listener for keyup event to handle text input change
+            target.style.outline = '1px solid black';
             this.handleKeyup = (event) => {
                 const tdin = target.closest('td');
                 target.style.backgroundColor = '#FAFAD2';
@@ -1677,10 +1529,10 @@ export default class DynamicDataTable extends LightningElement {
                     target.dataset.edited = "false";
                 }
 
-
                 const tr = target.closest('tr');
                 let isAnyFieldEdited = false;
                 tr.querySelectorAll('td').forEach(td => {
+
                     if (td.dataset.edited === "true") {
                         isAnyFieldEdited = true;
                     }
@@ -1689,65 +1541,257 @@ export default class DynamicDataTable extends LightningElement {
                 const td = tr.querySelector('td:first-child');
                 const hiddenId = td.querySelector('input[type="hidden"]');
                 if (hiddenId) {
-
-                    try {
-                        if (!this.editedIds.includes(hiddenId.value)) {
-                            this.editedIds.push(hiddenId.value);
-                            this.showSubmit = true;
-                            this.stopColumnRender = true;
-                        }
-                        else if (event.target.value == currentValue && !isAnyFieldEdited) {
-                            let index = this.editedIds.indexOf(hiddenId.value);
-                            if (index !== -1) {
-                                this.editedIds.splice(index, 1);
-                            }
-                            if (this.editedIds.length == 0) {
-                                this.showSubmit = false;
-                            }
-                        }
+                    if (!this.editedIds.includes(hiddenId.value)) {
+                        this.editedIds.push(hiddenId.value);
+                        this.showSubmit = true;
+                        this.stopColumnRender = true;
                     }
-                    catch (error) {
+                    else if (event.target.value == currentValue && !isAnyFieldEdited) {
+                        let index = this.editedIds.indexOf(hiddenId.value);
+                        if (index !== -1) {
+                            this.editedIds.splice(index, 1);
+                        }
+                        if (this.editedIds.length == 0) {
+                            this.showSubmit = false;
+                        }
                     }
                 }
             };
-             // Event listener for blur event to handle text input blur
+
             this.handleBlur = (event) => {
 
                 if (event.target.value == currentValue) {
                     target.readOnly = true;
                     target.style.border = 'none';
+                    target.style.outline = 'none';
                 }
                 target.readOnly = true;
                 target.style.border = 'none';
+                target.style.outline = 'none';
                 target.removeEventListener('keyup', this.handleKeyup);
             }
+
             // Adding the event listener
             target.removeEventListener('blur', this.handleBlur);
+
+            // Removing the event listener
             target.addEventListener('blur', this.handleBlur);
             target.addEventListener('keyup', this.handleKeyup);
-
         }
-        else if (target.tagName === 'TD') {
-            const td = target.querySelector('td');
+        else if (target.tagName === 'TD' && target.dataset.lookup == 'LOOKUPNAME' && this.inlineEditing) {
+
+            let selectedLabelinLi = '';
+            let selectedValueinLi;
+            let sss = target.dataset.header;
+            let s = sss.split('.');
+
+            const input1 = document.createElement('input');
+            input1.type = 'search';
+            let currentVal = target.textContent;
+            target.textContent = '';
+            input1.value = currentVal;
+
+            const dropdownDiv = document.createElement('div');
+            dropdownDiv.style.display = 'none';
+            dropdownDiv.style.border = '1px solid #ccc';
+            dropdownDiv.style.position = 'absolute';
+            dropdownDiv.style.zIndex = '1000';
+            dropdownDiv.style.backgroundColor = 'white';
+            const tr = target.closest('tr');
+            target.appendChild(input1);
+            target.appendChild(dropdownDiv);
+
+            input1.addEventListener('keyup', async (event) => {
+                let selectedVal = event.target.value;
+                if (this.debounceTimeout) {
+                    clearTimeout(this.debounceTimeout);
+                }
+                this.debounceTimeout = setTimeout(async () => {
+                    if (selectedVal.length > 0) {
+                        await this.fetchNamesOfObject(s[0], s[1], selectedVal);
+                        if (this.accountNames.length > 0) {
+                            dropdownDiv.innerHTML = '';
+
+                            const ul = document.createElement('ul');
+                            ul.style.border = '1px solid black';
+                            this.accountNames.forEach(account => {
+                                const li = document.createElement('li');
+                                li.textContent = account.label;
+                                li.dataset.value = account.value;
+                                li.style.padding = '4px';
+                                li.style.cursor = 'pointer';
+                                li.addEventListener('mouseover', () => {
+                                    li.style.backgroundColor = '#e0e0e0';
+                                    li.style.border = '1px solid blue';
+                                });
+                                li.addEventListener('mouseout', () => {
+                                    li.style.backgroundColor = '';
+                                    li.style.border = '';
+                                });
+                                ul.appendChild(li);
+
+                                li.addEventListener('click', (event) => {
+                                    selectedLabelinLi = event.target.textContent;
+                                    selectedValueinLi = event.target.dataset.value;
+                                    input1.value = selectedLabelinLi;
+                                    target.dataset.value = selectedValueinLi;
+                                    target.dataset.id = selectedValueinLi;
+                                    target.dataset.label = selectedLabelinLi;
+                                    if (selectedLabelinLi == 'No Data Available' || selectedLabelinLi == currentVal) {
+                                        target.dataset.edited = "false";
+                                    }
+                                    else {
+                                        target.dataset.edited = "true";
+                                    }
+
+                                    const hiddenIdCell = tr.querySelector('td:first-child');
+                                    const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                                    if (hiddenId && selectedLabelinLi !== 'No Data Available') {
+                                        console.log('selectedLabelinLi ::', selectedLabelinLi);
+                                        console.log('selectedValueinLi ::', selectedValueinLi);
+
+                                        console.log('currentVal ::', currentVal);
+                                        if (!this.editedIds.includes(hiddenId.value) && selectedLabelinLi !== currentVal) {
+                                            this.editedIds.push(hiddenId.value);
+                                            this.showSubmit = true;
+                                            this.stopColumnRender = true;
+                                        }
+                                        else if (selectedLabelinLi == currentVal) {
+                                            let index = this.editedIds.indexOf(hiddenId.value);
+                                            if (index !== -1) {
+                                                this.editedIds.splice(index, 1);
+                                            }
+                                            if (this.editedIds.length == 0) {
+                                                this.showSubmit = false;
+                                            }
+                                        }
+                                    }
+                                    else if (this.editedIds.length == 0) {
+                                        this.showSubmit = false;
+                                    }
+                                    dropdownDiv.style.display = 'none';
+                                });
+                            })
+                            dropdownDiv.appendChild(ul);
+                            dropdownDiv.style.display = 'block';
+                        }
+                    }
+                    else {
+                        console.log('no value cond.');
+                        console.log('input val :', input1.value);
+                        target.dataset.value = '';
+                        target.dataset.edited = 'true';
+                        currentVal = '';
+                        console.log('target val :', target.dataset.value);
+                        const hiddenIdCell = tr.querySelector('td:first-child');
+                        const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                        if (hiddenId) { //&& selectedLabelinLi !== 'No Data Available'
+                            if (!this.editedIds.includes(hiddenId.value)) { //&& selectedLabelinLi !== currentVal
+                                this.editedIds.push(hiddenId.value);
+                                this.showSubmit = true;
+                                this.stopColumnRender = true;
+                            }
+                            // else if (selectedLabelinLi == currentVal) {
+                            //     let index = this.editedIds.indexOf(hiddenId.value);
+                            //     if (index !== -1) {
+                            //         this.editedIds.splice(index, 1);
+                            //     }
+                            //     if (this.editedIds.length == 0) {
+                            //         this.showSubmit = false;
+                            //     }
+                            // }
+                        }
+                        console.log('edited id :', this.editedIds);
+                        this.accountNames = [];
+                        dropdownDiv.style.display = 'none';
+                    }
+                }, 250)
+
+            })
+
+            document.addEventListener('click', function handleOutsideClick(event) {
+                console.log('clicked outside');
+                if (!target.contains(event.target) && !dropdownDiv.contains(event.target)) {
+
+                    console.log('selectedLabelinLi  ::', selectedLabelinLi);
+                    console.log('selectedValueinLi  ::', selectedValueinLi);
+                    console.log('currentVal  ::', currentVal);
+                    console.log('target.value  ::', target.dataset.value);
+                    if (selectedLabelinLi == 'No Data Available' || (selectedLabelinLi == currentVal && currentVal != '')) {
+                        dropdownDiv.style.display = 'none';
+                        const link = document.createElement('a');
+                        link.href = target.dataset.linkid;
+                        link.textContent = currentVal;
+                        target.innerHTML = '';
+                        target.appendChild(link);
+                    }
+                    else if (selectedLabelinLi == currentVal && currentVal == '' && selectedValueinLi == undefined) {
+                        console.log('entered');
+                        dropdownDiv.style.display = 'none';
+                        target.innerHTML = '';
+
+                    }
+                    else if(selectedLabelinLi == '' && currentVal!==''){
+
+ dropdownDiv.style.display = 'none';
+                        const link = document.createElement('a');
+                        link.href = target.dataset.linkid;
+                        link.textContent = currentVal;
+                        target.innerHTML = '';
+                        target.appendChild(link);
+                    }
+                    document.removeEventListener('click', handleOutsideClick);
+                }
+            });
+        }
+    }
+
+    // Getting all Names of Object
+    async fetchNamesOfObject(val1, val2, val3) {
+        try {
+            const result = await getNamesOfObject({ sObjectName: val1, field: val2, searchKey: val3 });
+            if (result.length == 0) {
+                this.accountNames = [{ label: 'No Data Available', value: 'no data' }];
+            }
+            else {
+                this.accountNames = result.map(account => ({
+                    label: account.label || 'No Data Available',
+                    value: account.id || 'no data'
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching account names', error);
         }
     }
 
 
+    handleSelectionChange(event) {
+        if (this.selectedTdElement) {
+            this.selectedTdElement.textContent = event.detail.label;
+        }
+    }
+
+    // Function to save all editted records to save in database
     async submitData() {
         if (this.editedIds.length > 0) {
             const checkedIds = [];
-            const jsonData = [];
-            let hasError = false;
-
-             // Regular expression and function to validate email format
+            let jsonData = [];
+            let filArray = [];
+            this.hasError = false;
             const emailRegex = /^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+            const urlRegex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
+
+            function validateUrl(url) {
+                return urlRegex.test(url);
+            }
+
             function validateEmail(email) {
                 return emailRegex.test(email);
             }
 
-            // Iterate over each table row to get edited data
             this.template.querySelectorAll('tr').forEach(tr1 => {
                 const editedRow = {};
+                let relatedEditedRow = {};
                 let idFound = false;
                 const firstTd = tr1.querySelector('td:first-child');
 
@@ -1760,119 +1804,256 @@ export default class DynamicDataTable extends LightningElement {
                         const inputeditted = td.querySelector(' input[data-edited="true"]');
                         const select = td.querySelector('select');
 
-                        // Validate required fields
+                        // Handle Required fields of Object
                         if (this.editedIds.includes(hiddenCol.value) && this.requiredFieldMap[td.dataset.header]) {
                             let value;
                             if (td.dataset.type === "STRING") {
                                 if (input) {
                                     value = input.value;
-                                    if (value == '') {
+                                    if (value == '' && !td.dataset.header.includes('.')) {
                                         td.style.border = '2px solid red';
                                         this.errorToastMessage = true;
                                         this.errorMsg = 'Please enter a value in required field.';
-                                        hasError = true;
+                                        this.hasError = true;
                                     }
+                                    else if (value == '' && td.dataset.header.includes('.')) {
+                                        let dotHeader = td.dataset.header.split('.');
+                                        this.requiredToastMessage(dotHeader, hiddenCol.value, td);
+
+                                    }
+
                                 }
                             }
                             else if (td.dataset.type === 'PICKLIST') {
                                 const tdValue = td.textContent;
                                 if (select) {
                                     value = select.value;
+
                                 }
-                                if (tdValue == '' || value == '--None--') {
+                                if ((tdValue == '' || value == '--None--') && !td.dataset.header.includes('.')) {
                                     td.style.border = '2px solid red';
                                     this.errorToastMessage = true;
                                     this.errorMsg = 'Please enter a value in required field.';
-                                    hasError = true;
+                                    this.hasError = true;
+
+                                }
+                                else if ((td.dataset.value == '' || td.dataset.value == '--None--') && td.dataset.header.includes('.')) {
+                                    let dotHeader = td.dataset.header.split('.');
+                                    this.requiredToastMessage(dotHeader, hiddenCol.value, td);
+
                                 }
                             }
                             else if (td.dataset.type === 'DATE') {
-                                if (td.dataset.value == "null") {
+                                if ((td.dataset.value == "null" || td.dataset.value == '') && !td.dataset.header.includes('.')) {
                                     td.style.border = '2px solid red';
+
                                     this.errorToastMessage = true;
                                     this.errorMsg = 'Please enter a value in required field.';
-                                    hasError = true;
+                                    this.hasError = true;
+                                }
+                                else if ((td.dataset.value == '' || td.dataset.value == 'null') && td.dataset.header.includes('.')) {
+                                    let dotHeader = td.dataset.header.split('.');
+                                    this.requiredToastMessage(dotHeader, hiddenCol.value, td);
                                 }
                             }
                             else if (td.dataset.type === 'DATETIME') {
-                                if (td.dataset.value == "null") {
+                                if ((td.dataset.value == "null" || td.dataset.value == '') && !td.dataset.header.includes('.')) {
                                     td.style.border = '2px solid red';
                                     this.errorToastMessage = true;
                                     this.errorMsg = 'Please enter a value in required field.';
-                                    hasError = true;
+                                    this.hasError = true;
+                                }
+                                else if ((td.dataset.value == '' || td.dataset.value == "null") && td.dataset.header.includes('.')) {
+                                    let dotHeader = td.dataset.header.split('.');
+                                    this.requiredToastMessage(dotHeader, hiddenCol.value, td);
                                 }
                             }
                         }
 
-                        // Collect edited data
-                        if ((input && input.dataset.edited == 'true') || (select && td.dataset.edited === "true") || (td.dataset.type === 'DATE' && td.dataset.edited === 'true') || (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') || (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true')) {
-                            editedRow['Id'] = hiddenCol.value;
+                        // Collecting edited records of Object and related Objects
+                        if ((input && input.dataset.edited == 'true') || (select && td.dataset.edited === "true") || (td.dataset.type === 'DATE' && td.dataset.edited === 'true') || (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') || (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true') || (td.dataset.lookup === 'LOOKUPNAME' && td.dataset.edited === 'true')) {
                             const td2 = tr1.querySelector('td:nth-child(2)');
                             if (td2) {
                                 const checkbox = td2.querySelector('input[type="checkbox"]');
                                 if (checkbox) {
                                     const header = this.tableHeaders[index - 2];
-                                    if (this.fieldTypeMap[header] !== 'PICKLIST') {
-                                        if (this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value)) {
+                                    if (this.fieldTypeMap[header] !== 'PICKLIST' && this.fieldTypeMap[header] !== 'DATE' && this.fieldTypeMap[header] !== 'DATETIME' && this.fieldTypeMap[header] !== 'BOOLEAN' && td.dataset.lookup !== 'LOOKUPNAME') {
+                                        if ((this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value) && input.value !== '') || (this.fieldTypeMap[header] == 'URL' && !validateUrl(input.value) &&  input.value !== '')) {
                                             input.style.border = '2px solid red';
                                             this.errorToastMessage = true;
-                                            this.errorMsg = 'Please enter a valid email address in the correct format (e.g., user@example.com).';
-                                            hasError = true;
+                                            this.errorMsg = (this.fieldTypeMap[header] == 'EMAIL')
+                                                ? 'Please enter a proper email address.'
+                                                : (this.fieldTypeMap[header] == 'URL')
+                                                    ? 'Please enter a proper URL address.'
+                                                    : '';
+                                            this.hasError = true;
                                             return;
                                         }
-                                        editedRow[header] = input.value;
+                                        if (!header.includes('.')) {
+                                            editedRow['Id'] = hiddenCol.value;
+                                            editedRow[header] = input.value;
+                                        }
+                                        else {
+                                            let obj = this.processedDataForJson(header, hiddenCol.value, input.value);
+                                            relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                        }
                                     }
                                     else if (select) {
-                                        editedRow[header] = select.value;
+                                        if (!header.includes('.')) {
+                                            editedRow['Id'] = hiddenCol.value;
+                                            editedRow[header] = select.value;
+                                        }
+                                        else {
+                                            console.log('header :',header);
+                                            let obj = this.processedDataForJson(header, hiddenCol.value, select.value);
+                                            relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                            console.log('related edited row ::',relatedEditedRow);
+                                        }
                                     }
                                     else if (td.dataset.type === 'DATE' && td.dataset.edited === 'true') {
                                         if (this.editedIds.includes(hiddenCol.value)) {
-                                            editedRow[header] = td.dataset.value;
+                                            if (!header.includes('.')) {
+                                                editedRow['Id'] = hiddenCol.value;
+                                                editedRow[header] = td.dataset.value;
+                                            }
+                                            else {
+                                                let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
+                                                relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                            }
                                         }
                                     }
                                     else if (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') {
                                         if (this.editedIds.includes(hiddenCol.value)) {
-                                            editedRow[header] = td.dataset.value;
+                                            if (!header.includes('.')) {
+                                                editedRow['Id'] = hiddenCol.value;
+                                                editedRow[header] = td.dataset.value;
+                                            }
+                                            else {
+                                                let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
+                                                relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                            }
                                         }
                                     }
                                     else if (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true') {
-                                        editedRow[header] = td.dataset.value;
+
+                                        let head = td.dataset.header;
+                                        if (!head.includes('.')) {
+                                            editedRow['Id'] = hiddenCol.value;
+                                            editedRow[header] = td.dataset.value;
+                                        }
+                                        else {
+                                            let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
+                                            relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                        }
+                                    }
+                                    else if (td.dataset.lookup === 'LOOKUPNAME' && td.dataset.edited === 'true') {
+                                        let newHeader
+                                        if (header.includes('.')) {
+                                            newHeader = header.split('.');
+                                            if (newHeader[0].endsWith('__r')) {
+                                                newHeader = newHeader[0].replace('__r', '__c');
+                                            }
+                                            else {
+                                                newHeader = newHeader[0] + 'Id';
+                                            }
+                                        }
+                                        editedRow['Id'] = hiddenCol.value;
+                                        console.log('look up name ::', td.dataset.value);
+                                        editedRow[newHeader] = td.dataset.value;
                                     }
                                 }
                                 else if (select) {
                                     const header = this.tableHeaders[index - 1];
-                                    editedRow[header] = select.value;
+                                    if (!header.includes('.')) {
+                                        editedRow['Id'] = hiddenCol.value;
+                                        editedRow[header] = select.value;
+                                    }
+                                    else {
+                                        let obj = this.processedDataForJson(header, hiddenCol.value, select.value);
+                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                    }
+
                                 }
                                 else if (td.dataset.type === 'DATE' && td.dataset.edited === 'true') {
                                     const header = this.tableHeaders[index - 1];
-                                    editedRow[header] = td.dataset.value;
+
+
+                                    if (!header.includes('.')) {
+                                        editedRow['Id'] = hiddenCol.value;
+                                        editedRow[header] = td.dataset.value;
+                                    }
+                                    else {
+                                        let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
+                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                    }
                                 }
+
                                 else if (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') {
                                     const header = this.tableHeaders[index - 1];
-                                    editedRow[header] = td.dataset.value;
+                                    if (!header.includes('.')) {
+                                        editedRow['Id'] = hiddenCol.value;
+                                        editedRow[header] = td.dataset.value;
+                                    }
+                                    else {
+                                        let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
+                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                    }
                                 }
+
                                 else if (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true') {
                                     const header = this.tableHeaders[index - 1];
-                                    editedRow[header] = td.dataset.value;
+                                    if (!header.includes('.')) {
+                                        editedRow['Id'] = hiddenCol.value;
+                                        editedRow[header] = td.dataset.value;
+                                    }
+                                    else {
+                                        let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
+                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                    }
                                 }
+
+                                else if (td.dataset.lookup === 'LOOKUPNAME' && td.dataset.edited === 'true') {
+                                    const header = this.tableHeaders[index - 1];
+                                    let newHeader
+                                    if (header.includes('.')) {
+                                        newHeader = header.split('.');
+                                        if (newHeader[0].endsWith('__r')) {
+                                            newHeader = newHeader[0].replace('__r', '__c');
+                                        }
+                                        else {
+                                            newHeader = newHeader[0] + 'Id';
+                                        }
+                                    }
+                                    editedRow['Id'] = hiddenCol.value;
+                                    editedRow[newHeader] = td.dataset.value;
+                                }
+
                                 else {
                                     const header = this.tableHeaders[index - 1];
+
                                     if (this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value)) {
                                         input.style.border = '2px solid red';
                                         this.errorToastMessage = true;
-                                        this.errorMsg = 'Please enter a valid email address in the correct format (e.g., user@example.com).';
-                                        hasError = true;
+                                        this.errorMsg = 'Please enter a proper email address.';
+                                        this.hasError = true;
                                         return;
                                     }
-                                    editedRow[header] = input.value;
+                                    if (!header.includes('.')) {
+                                        editedRow['Id'] = hiddenCol.value;
+                                        editedRow[header] = input.value;
+                                    }
+                                    else {
+                                        let obj = this.processedDataForJson(header, hiddenCol.value, input.value);
+                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
+                                    }
                                 }
                             }
                             else {
                                 const header = this.tableHeaders[index - 1];
                                 if (this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value)) {
                                     this.errorToastMessage = true;
-                                    this.errorMsg = 'Please enter a valid email address in the correct format (e.g., user@example.com).';
-                                    hasError = true;
+                                    this.errorMsg = 'Please enter a proper email address';
+                                    this.hasError = true;
                                     return;
                                 }
                                 editedRow[header] = input.value;
@@ -1880,57 +2061,187 @@ export default class DynamicDataTable extends LightningElement {
                         }
                     });
 
-                     // Add the edited row to jsonData 
                     if (editedRow && Object.keys(editedRow).length > 0) {
                         jsonData.push(editedRow);
                     }
+                    if (relatedEditedRow && Object.keys(relatedEditedRow).length > 0) {
+                        // Handle data with same related ObjectId and edited field
+                        filArray = jsonData.filter(item => item.Id !== relatedEditedRow.Id);
+                        const existItem = jsonData.find(item => item.Id == relatedEditedRow.Id);
+
+                        if (existItem) {
+                            const merge = { ...existItem, ...relatedEditedRow };
+                            filArray.push(merge);
+                        } else {
+                            filArray.push(relatedEditedRow);
+                        }
+
+                        jsonData = filArray;
+                    }
                 }
             });
-
-             // If there are validation errors, exit the function
-            if (hasError) {
+            if (this.hasError) {
                 return;
             }
+            console.log('json data ::', jsonData);
+            // Saving the data to database
+            const result = await updateSObject({ jsonData: JSON.stringify(jsonData) })
 
-             // Update the SObject with the collected data
-            await updateSObject({ jsonData: JSON.stringify(jsonData) })
-                .then(result => {
-                    if (result.startsWith('Record')) {
-                        this.successToastMessage = true;
-                        this.successMsg = result;
-                        jsonData.forEach((editedEntry) => {
-                            const idToUpdate = editedEntry.Id;
-                            this.globalData = this.globalData.map((entry) => {
-                                if (entry.Id === idToUpdate) {
-                                    const updatedEntry = { ...entry, ...editedEntry };
-                                    for (let key in updatedEntry) {
-                                        if (updatedEntry[key] === '--None--') {
-                                            updatedEntry[key] = '';
-                                        }
+            if (result.startsWith('Record')) {
+                const trs = this.template.querySelectorAll('tr');
+
+                for (const tr of trs) {
+                    const tds = tr.querySelectorAll('td');
+
+                    for (const td of tds) {
+                        if (td && td.dataset.edited == 'true') {
+                            const trins = td.closest('tr');
+                            const tds = trins.querySelectorAll('td');
+                            tds.forEach((td) => {
+                                const input = td.querySelector('input[type="hidden"]');
+                                if (input) {
+                                    if (!this.hidColId.includes(input.value)) {
+                                        this.hidColId.push(input.value);
                                     }
-                                    return updatedEntry;
                                 }
-                                return entry;
-                            });
-                        });
-                    }
-                    else {
-                        this.errorToastMessage = true;
-                        this.errorMsg = result;
-                    }
-                })
+                            })
 
-            // Reset editedIds and update the table display
+                            if (td.dataset.header.includes('.')) {
+                                let idToFind = td.dataset.header.split('.')[0];
+                                if (!idToFind.endsWith('__r')) {
+                                    idToFind = idToFind + 'Id';
+                                }
+                                else {
+                                    idToFind = idToFind.replace('__r', '__c');
+                                }
+
+                                this.globalData.filter((row) => {
+                                    return row[idToFind] == td.dataset.id;
+                                }).map((row) => {
+                                    if (!this.hidColId.includes(row.Id)) {
+                                        this.hidColId.push(row.Id);
+                                    }
+                                })
+                            }
+                        }
+                    }
+                }
+                // Updating the records in table after saving records in database
+                for (const tr of trs) {
+                    const tds = tr.querySelectorAll('td');
+                    for (const td of tds) {
+                        if (td && td.dataset.edited == 'true') {
+                            const referenceFieldData2 = this.getReferenceFieldData2(jsonData);
+                            console.log('referenceFieldData2', referenceFieldData2);
+                            const updatedRecords2 = await getRelatedRecords({ referenceData: referenceFieldData2 });
+                            console.log('updatedRecords2', updatedRecords2);
+
+                            updatedRecords2.forEach((editedEntry) => {
+                                let idToUpdate = editedEntry.Id;
+                                this.globalData = this.globalData.map((entry) => {
+
+                                    if (entry.Id == idToUpdate) {
+                                        console.log('entry', entry);
+                                        console.log('editedEntry', editedEntry);
+
+                                        Object.keys(entry).forEach((key) => {
+                                            if (typeof entry[key] === 'object' && entry[key] !== null) {
+                                                if (!(key in editedEntry) && key !== 'attributes') {
+                                                    // If the object itself is missing, set it to null
+                                                    // editedEntry[key] = {};
+                                                    editedEntry[key] = { ...entry[key] }; // Copy the object structure
+                                                    Object.keys(entry[key]).forEach((subKey) => {
+                                                        if ((subKey in editedEntry[key]) && subKey !== 'attributes') {
+                                                            editedEntry[key][subKey] = ''; // Set missing sub-properties to ''
+                                                        }
+                                                    })
+                                                } else if (typeof editedEntry[key] === 'object') {
+                                                    // If the object exists in editedEntry, check sub-properties
+                                                    Object.keys(entry[key]).forEach((subKey) => {
+                                                        if (!(subKey in editedEntry[key]) && subKey !== 'attributes') {
+                                                            editedEntry[key][subKey] = ''; // Set missing sub-properties to ''
+                                                        }
+                                                    });
+                                                }
+                                                console.log('editedEntry[key] first', editedEntry[key]);
+                                            }
+                                            else {
+                                                console.log('other cond.', key);
+                                                if (!(key in editedEntry) && key !== 'attributes') {
+                                                    editedEntry[key] = '';
+                                                    console.log('key', key);
+                                                }
+                                                console.log('editedEntry[key]', editedEntry[key]);
+
+                                            }
+
+                                        });
+                                        const updatedEntry = { ...entry, ...editedEntry };
+                                        console.log('updatedEntry 1 ::', updatedEntry);
+                                        return updatedEntry;
+                                    }
+                                    return entry;
+                                })
+                            })
+                        }
+                    }
+                }
+                console.log('global data ::', this.globalData);
+                this.successToastMessage = true;
+                this.successMsg = result;
+                this.successToastMessage = true;
+                this.successMsg = result;
+                jsonData.forEach((editedEntry) => {
+                    const idToUpdate = editedEntry.Id;
+                    this.globalData = this.globalData.map((entry) => {
+                        if (entry.Id === idToUpdate) {
+
+                            const updatedEntry = { ...entry, ...editedEntry };
+                            console.log('updated Entry below  ::', updatedEntry);
+                            for (let key in updatedEntry) {
+
+                                if (updatedEntry[key] === '--None--') {
+                                    updatedEntry[key] = '';
+                                }
+                            }
+                            console.log('updatedEntry 2 ::', updatedEntry);
+
+                            return updatedEntry;
+                        }
+                        return entry;
+                    });
+                });
+            }
+            else {
+                this.errorToastMessage = true;
+                this.errorMsg = result;
+            }
             this.editedIds = [];
             this.showSubmit = false;
             this.populateTableBody();
-
+            const inputElement = this.template.querySelector('[data-id="searchInput"]');
+            inputElement.value = '';
+            this.tableDataPn = this.globalData;
+            this.showInput = false;
+            const allArrowIcons = this.template.querySelectorAll('lightning-icon');
+            allArrowIcons.forEach(icon => {
+                icon.classList.remove('arrowIconShow');
+            });
         }
+    }
+
+    // Handle Update of the rows after saving the record.
+    getReferenceFieldData2(jsonData) {
+        const referenceFields = [];
+        this.hidColId.forEach(row => {
+            referenceFields.push({ query: this.soql, id: row, fields: this.tableHeaders.toString() });
+        })
+        return referenceFields;
 
     }
 
+    //Handle Cancel Button 
     handleCancel() {
-        // Reset the table data
         if (this.editedIds.length > 0) {
             this.populateTableBody();
             this.editedIds = [];
@@ -1938,15 +2249,103 @@ export default class DynamicDataTable extends LightningElement {
         this.showSubmit = false;
     }
 
+    // Handle Closing of succes toast message
     handleClose() {
-        // Close the Success toast message 
         this.successToastMessage = false;
     }
 
+    // Handle Closing of succes toast message
     handleErrorClose() {
-        // Close the Error toast message 
         this.errorToastMessage = false;
     }
 
+    // Handle csv data
+    handleCsvData() {
+        handleCsvData.bind(this)(this.selectedRows, this.globalData, this.tableHeaderLabel, this.tableHeaders);
+    }
 
+    // Handle xls data
+    handleExcelData() {
+        handleExcelData.bind(this)(this.selectedRows, this.globalData, this.tableHeaderLabel, this.tableHeaders);
+    }
+
+    // Handle Json Data of Related Objects 
+    processedDataForJson(head, hidColVal, tdVal) {
+        let relatedEditedRow = {};
+        let dotHeader = head.split('.');
+        if (dotHeader[1] !== 'Name') {
+            this.globalData.find((entry) => {
+                if (entry.Id == hidColVal) {
+
+                    if (!dotHeader[0].endsWith('__r')) {
+                        let newHeader = dotHeader[0] + '.Name';
+                        this.template.querySelectorAll('tr').forEach(tr1 => {
+                            const firstTd = tr1.querySelector('td:first-child');
+
+                            if (firstTd) {
+                                const hiddenCol = firstTd.querySelector('input[type="hidden"]');
+
+                                if (hiddenCol.value == hidColVal) {
+                                    const tr = hiddenCol.closest('tr');
+                                    const tds = tr.querySelectorAll('td');
+                                    tds.forEach(td => {
+                                        if (td.dataset.header == newHeader) {
+                                            relatedEditedRow['Id'] = td.dataset.id;
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                        relatedEditedRow[dotHeader[1]] = tdVal;
+                    }
+                    else {
+                        let newHeader = dotHeader[0].replace('__r', '__r.Name');
+                        this.template.querySelectorAll('tr').forEach(tr1 => {
+                            const firstTd = tr1.querySelector('td:first-child');
+
+                            if (firstTd) {
+                                const hiddenCol = firstTd.querySelector('input[type="hidden"]');
+                                if (hiddenCol.value == hidColVal) {
+                                    const tr = hiddenCol.closest('tr');
+                                    const tds = tr.querySelectorAll('td');
+                                    tds.forEach(td => {
+                                        if (td.dataset.header == newHeader) {
+                                            relatedEditedRow['Id'] = td.dataset.id;
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                        relatedEditedRow[dotHeader[1]] = tdVal;
+                    }
+                }
+            })
+            return relatedEditedRow;
+        }
+    }
+
+    // Validation Toast Message for Required Fields
+    requiredToastMessage(header, hiddenColVal, td) {
+        let dotHeader = header;
+        let newHeader;
+        if (dotHeader[1] !== 'Name') {
+            if (!dotHeader[0].endsWith('__r')) {
+                newHeader = dotHeader[0] + 'Id';
+            }
+            else {
+                newHeader = dotHeader[0].replace('__r', '__c');
+            }
+
+            this.globalData.find((entry) => {
+                console.log('entry [newHeader]  ::',entry[newHeader]);
+                console.log('entry is :: ',entry);
+                if (entry.Id == hiddenColVal && entry[newHeader] !== undefined && entry[newHeader] !== '') {
+                    td.style.border = '2px solid red';
+                    this.errorToastMessage = true;
+                    this.errorMsg = 'Please enter a value in required field.';
+                    this.hasError = true;
+                }
+            })
+        }
+    }
 }

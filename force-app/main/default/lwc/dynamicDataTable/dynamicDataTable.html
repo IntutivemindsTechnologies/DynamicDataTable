@@ -7,6 +7,51 @@
 
     </template>
 
+
+
+
+
+    <!-- <template if:true={showSearchLookup2}>
+        <div class="slds-form-element">
+            <label class="slds-form-element__label" for="combobox-id-12" id="combobox-label-id-130">Relate To</label>
+            <div class="slds-form-element__control">
+            <div class="slds-combobox_container">
+            <div class="slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click slds-is-open">
+            <div class="slds-combobox__form-element slds-input-has-icon slds-input-has-icon_right" role="none">
+            <input type="text" class="slds-input slds-combobox__input slds-has-focus" id="combobox-id-12" aria-autocomplete="list" aria-controls="listbox-id-10" aria-expanded="true" aria-haspopup="listbox" autocomplete="off" role="combobox" placeholder="Search..."/>
+            <span class="slds-icon_container slds-icon-utility-search slds-input__icon slds-input__icon_right">
+            <svg class="slds-icon slds-icon slds-icon_x-small slds-icon-text-default" aria-hidden="true">
+            <use xlink:href="/assets/icons/utility-sprite/svg/symbols.svg#search"></use>
+            </svg>
+            </span>
+            </div>
+            <div id="listbox-id-10" class="slds-dropdown slds-dropdown_length-5 slds-dropdown_fluid" role="listbox" aria-label="Placeholder for Dropdown Items" tabindex="0" aria-busy="false">
+            <ul class="slds-listbox slds-listbox_vertical" role="presentation">
+                <template for:each={accountNames} for:item="name">
+                    <li key={name} role="presentation" class="slds-listbox__item">
+                        <div class="slds-media slds-listbox__option slds-listbox__option_entity slds-listbox__option_has-meta" role="option">
+                            <span class="slds-media__figure slds-listbox__option-icon">
+                                <span class="slds-icon_container slds-icon-standard-account">
+                                    <svg class="slds-icon slds-icon_small" aria-hidden="true">
+                                        <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#account"></use>
+                                    </svg>
+                                </span>
+                            </span>
+                            <span class="slds-media__body">
+                                <span class="slds-listbox__option-text slds-listbox__option-text_entity">{name}</span>
+                            </span>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+            </div>
+            </div>
+            </div>
+            </div>
+            </div>
+    </template> -->
+
+
     <template if:false={isLoading}>
 
 
@@ -37,6 +82,7 @@
 
                                 <ul class="slds-button-group-row">
 
+
                                     <li class="slds-button-group-item">
                                         <template if:true={showtoggle}>
                                             <template if:true={showReferenceToggle}>
@@ -45,6 +91,22 @@
                                                     onchange={handleIdColumn} message-toggle-active="Enabled"
                                                     message-toggle-inactive="Disabled"></lightning-input>
                                             </template>
+                                        </template>
+                                    </li>
+
+
+                                    <li class="slds-button-group-item">
+                                        <template if:true={showExportButtons}>
+                                            <lightning-icon icon-name="doctype:csv" title="Export Data as CSV"
+                                                onclick={handleCsvData}></lightning-icon>
+                                            <lightning-icon icon-name="doctype:excel" title="Export Data as Excel"
+                                                onclick={handleExcelData}></lightning-icon>
+
+                                            <!-- <lightning-button label="CSV" class="slds-m-left_x-small" onclick={handleCsvData}
+                                    variant="brand" title="Export data as CSV"></lightning-button>
+                                    <lightning-button label="EXCEL" onclick={handleGoNext} class="slds-m-left_x-small"
+                                    variant="brand" title="Export data as Excel"></lightning-button> -->
+
                                         </template>
                                     </li>
 
@@ -81,9 +143,8 @@
                                         <h2 class="slds-text-heading_small ">{successMsg}</h2>
                                     </div>
                                     <div class="slds-notify__close">
-                                        <lightning-icon icon-name="utility:close" alternative-text="Close"
-                                            title="Close" size="xx-small" onclick={handleClose}
-                                            variant="inverse"></lightning-icon>
+                                        <lightning-icon icon-name="utility:close" alternative-text="Close" title="Close"
+                                            size="xx-small" onclick={handleClose} variant="inverse"></lightning-icon>
 
                                     </div>
                                 </div>
@@ -103,8 +164,8 @@
                                         <h2 class="slds-text-heading_small ">{errorMsg}</h2>
                                     </div>
                                     <div class="slds-notify__close">
-                                        <lightning-icon icon-name="utility:close" alternative-text="Close"
-                                            title="Close" size="xx-small" onclick={handleErrorClose}
+                                        <lightning-icon icon-name="utility:close" alternative-text="Close" title="Close"
+                                            size="xx-small" onclick={handleErrorClose}
                                             variant="inverse"></lightning-icon>
 
                                     </div>
@@ -112,6 +173,23 @@
                             </div>
 
                         </div>
+                        <!-- <template if:true={childLookup}>
+                            <c-dynamic-lookup-finder
+                            object={objectNameForChild}
+                            field={fieldNameForChild}
+                            input-value={inputValueForChild}
+                            onchange={handleSelectionChange}></c-dynamic-lookup-finder>
+                        </template> -->
+                        <!-- <div> -->
+                            <!-- <c-test-component></c-test-component> -->
+
+                            <!-- </div> -->
+
+                        <!-- <div class="cont">
+                            <lwc:component lwc:is={dynamicInstance}>
+                            </lwc:component>
+                        </div> -->
+                       
 
                         <lightning-input type="search" placeholder="Search the list..." onkeyup={handleKeyUp}
                             oncommit={handleCross} data-id="searchInput"></lightning-input>
@@ -124,7 +202,8 @@
 
                         <div class="scrollable-content  " onscroll={handleScroll}>
 
-                            <table class="slds-table slds-table_bordered slds-table_cell-buffer " data-id="tableId">
+                            <table class="slds-table slds-table_bordered slds-table_cell-buffer " data-id="tableId"
+                                id="dynamicTable">
 
                                 <thead>
 
@@ -197,9 +276,10 @@
 
                                     </tr>
                                 </thead>
-
+                             
 
                                 <tbody>
+                                   
 
                                 </tbody>
 
