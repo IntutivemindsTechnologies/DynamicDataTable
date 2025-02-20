@@ -67,8 +67,6 @@
 }
 
 .slds-dropdown {
-    position: absolute;
-    top: 6.5rem;
-    z-index: 1000;
-    right: 10.9rem;
+    display: block; 
 }
+
