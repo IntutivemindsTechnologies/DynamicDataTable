@@ -160,7 +160,7 @@ public with sharing class DynamicDataTableHandler {
     }
     
     
-    @AuraEnabled(cacheable=true)
+    @AuraEnabled
     public static String getDataFromQuery(String query,Integer limitSize,Integer offset){
         Set<String> queriedFields = getFieldListFromQuery(query);
         String objectName = getObjectNameFromQuery(query);
@@ -593,6 +593,7 @@ public with sharing class DynamicDataTableHandler {
         } 
         
         List<String> picklistValues = new List<String>();
+       
         try{
             SObjectType objToken = schemaGlobalObject(objectname);
             Schema.DescribeFieldResult fieldResult = getFieldDescribe(objToken,field);
@@ -609,6 +610,19 @@ public with sharing class DynamicDataTableHandler {
             throw e;
         }
         return picklistValues;
+    }
+
+     @AuraEnabled(cacheable=true)
+    public static Map<String,String> getQueryValues(){
+        Map<String,String> values = new Map<String,String>();
+        List<SObject> queryList = [Select Id,Name,Query__c, Active__c from Query__c where Active__c=true];
+        
+        for(SObject queryData:queryList){
+           values.put((String)queryData.get('Name'),(String)queryData.get('Query__c'));
+        }
+        
+       
+        return values;
     }
     
 }

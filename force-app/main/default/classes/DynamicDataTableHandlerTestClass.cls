@@ -220,6 +220,37 @@ public class DynamicDataTableHandlerTestClass {
         Account resultAcc1 = (Account)resultMap.get(acc1.Id);  
         System.assertEquals('Account 1', resultAcc1.Name);  
     }
+
     
+    
+      @isTest
+    static void testGetQueryValues() {
+      
+        Query__c activeQuery1 = new Query__c(
+            Name = 'Test Query 1',
+            Query__c = 'SELECT Id FROM Account',
+            Active__c = true
+        );
+        
+      
+
+        Query__c inactiveQuery = new Query__c(
+            Name = 'Inactive Query',
+            Query__c = 'SELECT Id FROM Opportunity',
+            Active__c = false
+        );
+
+        insert new List<Query__c>{ activeQuery1, inactiveQuery };
+
+ 
+        Test.startTest();
+        Map<String, String> result = DynamicDataTableHandler.getQueryValues();
+        Test.stopTest();
+
+      
+        
+        System.assertEquals('SELECT Id FROM Account', result.get('Test Query 1'));
+        System.assertEquals(null, result.get('Inactive Query'), 'Inactive queries should not be present');
+    }
     
 }
