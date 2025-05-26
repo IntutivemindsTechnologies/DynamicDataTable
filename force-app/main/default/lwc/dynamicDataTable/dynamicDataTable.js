@@ -22,6 +22,18 @@ import { checkAllCheckboxes } from "./utils/mainCheckBoxHandler";
 import { handleCheckboxChange } from "./utils/singleCheckBoxHandler";
 import { handleScroll } from "./utils/scrollHandler";
 import { handleIdColumn } from "./utils/idColumnHandler";
+import { handleGlobalReset } from "./utils/globalResetHandler";
+import { resetVariables } from "./utils/resetVariablesHandler";
+import { handleOpenDataSource } from "./utils/openDataSource";
+import { handleDropChange } from "./utils/dataSourceDropdown";
+import { handleJsonDataClickSec } from "./utils/mainJsonDataClick";
+import { handleJsonDataClick } from "./utils/componentJsonDataClick";
+import { handleOptionSelect } from "./utils/queryOptionSelect";
+import { handleFileCLick } from "./utils/fileDropdownHandler";
+import { handleGlobalReset2 } from "./utils/globalResetSec";
+import { toggleDrawer } from "./utils/settingPopup";
+import getQueryValues from '@salesforce/apex/DynamicDataTableHandler.getQueryValues';
+
 
 
 export default class DynamicDataTable extends LightningElement {
@@ -50,9 +62,9 @@ export default class DynamicDataTable extends LightningElement {
     @api relatedLabelMap = {};
     @api isUpdatable;
     @api isUpdatableMap = {};
-    @api tableHeaderToRemove = [];
+    tableHeaderToRemove = [];
     @track toggleIdColumn = true;
-    @api tableHeaderLabelToRemove = [];
+    tableHeaderLabelToRemove = [];
     @api rowSize = 10;
     @api rowOffset = 0;
     @api showSpinner = false;
@@ -60,8 +72,10 @@ export default class DynamicDataTable extends LightningElement {
     enableInfiniteLoading = false;
     totalRecords = 0;
     showSubmit = false;
+    @api objectLabelFromProperty;
     @api objectLabel;
     isLoading = true;
+    isLoadingData = false;
     iconName;
     @api showReferenceToggle = false;
     @api globalSearchResult = [];
@@ -73,7 +87,7 @@ export default class DynamicDataTable extends LightningElement {
     @api globalSearchCloseFilterData;
     @api isIdColumnVisible = false;
     @track scrolled = false;
-    filteredData = [];
+    @api filteredData = [];
     @api checkForFilteredList;
     @api checkBoxVisibile = false;
     @api showtoggle = false;
@@ -99,32 +113,292 @@ export default class DynamicDataTable extends LightningElement {
     debounceTimeout;
     hidColId = [];
     hasError = false;
+    @api jsonData = false;
+    @api soqlData = false;
+    @api statusOptions;
+    queryData = false;
+    @track isChecked = false;
+    @api customQuery;
+    @api jsonDataa = false;
+    @api soqlDataa = false;
+    @track value1;
+    @api value2;
+    @api value3;
+    @track disableJsonValidation = false;
+    @api isJsonValid;
+    @api isSoqlValid;
+    @api flowData = false;
+    @api jsonTextBox = false;
+    @api soqlDropdown = false;
+    @api queryDropdownData;
+    @api customErrorMessage;
+    @api showCustomError = false;
+    @api mainDropdownVal;
+    @api showtoggleProperty;
+    @api getOpen = false;
+    @api dropdownOpen;
+    @track selectedLabel = 'Select an Option…';
+    @api soqlLoadData = false;
+    @api lastUpdatedTime = new Date();
+    @track isDrawerOpen = false;
+    @api firstBox;
+    @api isFileDropdown = false;
+    @api isAdditionalFunction;
+    @api drawerStyle;
+    @api isDrawerVisible = false;
+    @api isDrawerOpennn = false;
+    @track jsonInput = '';
+    @track soqlInput = '';
+    @track isSettingPopup;
 
 
+
+
+    get isButtonDisabled() {
+        return !this.jsonInput || this.jsonInput.trim().length === 0;
+    }
+  
+    // To get value in Json Textbox
+    handleJsonInputChange(event) {
+        this.jsonInput = event.target.value;
+    }
+
+
+    get isSoqlButtonDisabled() {
+        return !this.soqlInput || this.soqlInput.trim().length === 0;
+    }
+
+    // To get value in Soql Textbox
+    handleSoqlnInputChange(event) {
+        this.soqlInput = event.target.value;
+    }
+
+    get drawerClass() {
+        return this.isDrawerOpen ? 'drawer slide-in' : 'drawer slide-out';
+
+    }
+
+    // To handle file outside click
+    handleFileOutsideClick = (event) => {
+        try {
+            const dropdown = this.template.querySelector('.dropdown-container');
+            if (
+                dropdown &&
+                !dropdown.contains(event.target)) {
+
+                this.isDrawerOpen = false;
+                this.isDrawerVisible = false;
+                this.template.removeEventListener('click', this.handleFileOutsideClick);
+            }
+        }
+        catch (error) {
+           
+        }
+
+    }
+
+    //To Reset variables
+    handleGlobalReset2() {
+        handleGlobalReset2.bind(this)(this);
+    }
+
+
+    // To Open the Sidebar of Datasource
+    handleOpenDataSource(event) {
+        handleOpenDataSource.bind(this)(this);
+    }
+
+
+    
+    handleSettingPopupOutClick = (event) => {
+        try {
+            const dropdown = this.template.querySelector('.addSetting');
+            const settingIcon = this.template.querySelector('.trigger-icon');
+
+            if (dropdown && !dropdown.contains(event.target) && settingIcon && !settingIcon.contains(event.target)) {
+                this.isSettingPopup = false;
+                this.template.removeEventListener('click', this.handleSettingPopupOutClick);
+            }
+        }
+        catch (error) {
+            
+        }
+    }
+
+    //To Open Popup from Setting Icon
+    toggleDrawer() {
+        toggleDrawer.bind(this)(this);
+    }
+
+    //To Open Popup for downloading files
+    handleFileCLick() {
+        handleFileCLick.bind(this)(this);
+    }
+
+
+    handleAdditionalFuncOutClick = (event) => {
+        try {
+            const dropdown = this.template.querySelector('.addFile');
+            const toggleIcon = this.template.querySelector('.combo-button');
+
+            if (dropdown && !dropdown.contains(event.target) && toggleIcon && !toggleIcon.contains(event.target)) {
+                this.isFileDropdown = false;
+                this.template.removeEventListener('click', this.handleAdditionalFuncOutClick);
+            }
+        }
+        catch (error) {
+
+        }
+    }
+
+
+    get timeAgo() {
+        if (!this.lastUpdatedTime) return '';
+        const now = new Date();
+        const updated = new Date(this.lastUpdatedTime);
+        const diffMs = now - updated;
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHr = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHr / 24);
+
+        if (diffSec < 60) return `few seconds ago`;
+        if (diffMin < 60) return `${diffMin} minutes ago`;
+        if (diffHr < 24) return `${diffHr} hour ago`;
+        return `${diffDay} day ago`;
+    }
+
+
+    get dropdownTriggerClass() {
+        return `slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click ${this.dropdownOpen ? 'slds-is-open' : ''}`;
+    }
+
+    //To toggle the SOQL Query dropdown
+    toggleDropdown() {
+        this.dropdownOpen = !this.dropdownOpen;
+    }
+
+    // To Select option from SOQL Query Dropdown
+    handleOptionSelect(event) {
+        handleOptionSelect.bind(this)(event, this);
+    }
+
+    get dropdownOptions() {
+        const options = [];
+
+        if (this.flowRecord.length > 0) {
+            options.push({ label: 'Flow Data', value: 'flowdata' });
+        }
+        if (this.jsonData) {
+            options.push({ label: 'JSON Data', value: 'jsondata' });
+        }
+        if (this.soqlData) {
+            options.push({ label: 'SOQL Data', value: 'soqldata' });
+        }
+        return options;
+    }
+
+    //To Reset all the Datasource Dropdown Value
+    handleGlobalReset(event) {
+        handleGlobalReset.bind(this)(this);
+
+    }
+ 
+    //To Reset all the variables of Datasorce
+    resetVariables() {
+        resetVariables.bind(this)(this);
+    }
+    
+    //To handle selection from DataSource Dropdown
+    handleDropChange(event) {
+        handleDropChange.bind(this)(event, this);
+    }
+
+    get isTextAreaValid() {
+        return !this.isChecked;
+    }
+
+
+    handleDropdownClick = (event) => {
+        event.stopPropagation();
+    };
+
+
+    handleOutsideClick = (event) => {
+        setTimeout(() => {
+            this.dropdownOpen = false;
+        }, 100);
+    }
+
+    disconnectedCallback() {
+        window.removeEventListener('click', this.handleOutsideClick);
+        clearInterval(this.interval);
+    }
 
     connectedCallback() {
+        window.addEventListener('click', this.handleOutsideClick);
+        this.firstBox = true;
+        if (this.flowRecord.length > 0) {
+            this.firstBox = false;
+            this.mainDropdownVal = 'flowdata';
+            if (this.objectLabelFromProperty == undefined) {
+                this.objectLabel = null;
+            }
+            else {
+                this.objectLabel = this.objectLabelFromProperty;
+            }
+            this.loadTableData();
+        }
 
+        getQueryValues()
+            .then(result => {
+                this.statusOptions = Object.keys(result).map(key => ({
+                    label: key,
+                    value: result[key]
+                }));
+            })
+            .catch(error => {
+
+            })
+
+    }
+
+    // To handle JSON Data Click
+    handleJsonDataClick() {
+        handleJsonDataClick.bind(this)(this);
+    }
+
+    handleJsonDataClickSec() {
+        handleJsonDataClickSec.bind(this)(this);
+    }
+    
+    //To load Data in table 
+    loadTableData() {
         if (this.tableData !== undefined) {
             try {
                 // Condition for Json input
                 if (this.tableData && this.tableData.toLowerCase().trim().indexOf("[") === 0) {
-                    this.tableData = JSON.parse(this.tableData);
-                    this.tableHeaders = Object.keys(this.tableData[0]);
-                    this.tableHeaderLabel = this.tableHeaders;
-                    this.tableDataPn = this.tableData;
-                    this.globalData = this.tableDataPn;
-                    this.totalRecords = this.globalData.length;
-                    this.isLoading = false;
-                    if (this.objectLabel == null) {
-                        this.objectLabel = 'JSON Data';
-                    }
-                    if (this.exportData) {
-                        this.showExportButtons = true;
-                    }
-                    this.iconName = 'standard:dataset';
+                    setTimeout(() => {
+                        this.tableData = JSON.parse(this.tableData);
+                        this.tableHeaders = Object.keys(this.tableData[0]);
+                        this.tableHeaderLabel = this.tableHeaders;
+                        this.tableDataPn = this.tableData;
+                        this.globalData = this.tableDataPn;
+                        this.totalRecords = this.globalData.length;
+                        this.isLoading = false;
+                        this.isLoadingData = false;
+
+                        if (this.objectLabel == null) {
+                            this.objectLabel = 'JSON Data';
+                        }
+                        if (this.exportData) {
+                            this.showExportButtons = true;
+                        }
+                        this.iconName = 'standard:dataset';
+                    }, 800);
                 }
                 // Condition for Soql input
-                else if (this.tableData && this.tableData.toLowerCase().trim().indexOf("select") === 0) {
+                else if (this.tableData && this.tableData.toLowerCase().trim().indexOf("select") === 0) { 
                     this.soql = this.tableData;
                     if (this.objectLabel == null) {
                         //Getting Object Label Name.
@@ -143,12 +417,15 @@ export default class DynamicDataTable extends LightningElement {
                 }
                 else {
                     this.isLoading = false;
+                    this.isLoadingData = false;
                     this.tableData = false;
                     this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
                 }
             }
             catch (error) {
+                console.error('error is 33 ::', JSON, stringify(error));
                 this.isLoading = false;
+                this.isLoadingData = false;
                 this.tableData = false;
                 this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
             }
@@ -160,13 +437,14 @@ export default class DynamicDataTable extends LightningElement {
         }
         // Condition for flow record input
         else if (this.flowRecord.length > 0) {
-            this.inlineEditing=false;
-            this.tableData = this.flowRecord;
+            this.tableData = JSON.parse(JSON.stringify(this.flowRecord));
             this.tableHeaders = Object.keys(this.tableData[0]);
             this.tableHeaderLabel = this.tableHeaders;
             this.tableDataPn = this.flowRecord;
             this.globalData = this.tableDataPn;
             this.isLoading = false;
+            this.enableInfiniteLoading = false;
+
             if (this.objectLabel == null) {
                 this.objectLabel = 'Flow Record Data';
             }
@@ -174,6 +452,7 @@ export default class DynamicDataTable extends LightningElement {
                 this.showExportButtons = true;
             }
             this.iconName = 'standard:dataset';
+            this.stopColumnRender = false;
         }
         else {
             this.isLoading = false;
@@ -183,8 +462,6 @@ export default class DynamicDataTable extends LightningElement {
 
     }
 
-
-    // Fetches SOQL data and processes it
     getSoqlData() {
         if (this.exportData) {
             this.showExportButtons = true;
@@ -233,15 +510,14 @@ export default class DynamicDataTable extends LightningElement {
             .then(async result => {
                 this.tableData = JSON.parse(result);
                 this.fieldTypeMap = await getMapofTypeForFields({ query: this.soql });
-                console.log('field type ::',this.fieldTypeMap);
                 this.isUpdatableMap = await getUpdateStatusNew({ query: this.soql });
                 this.requiredFieldMap = await getMapofRequiredField({ query: this.soql });
-
 
                 if (this.tableData.length === 0 && this.globalData.length === 0) {
                     this.tableData = false;
                     this.showNoDataMessage = true;
                     this.isLoading = false;
+                    this.isLoadingData = false;
                     this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
                 }
                 else {
@@ -261,21 +537,15 @@ export default class DynamicDataTable extends LightningElement {
 
                     if (this.toggleIdColumn == true && this.showtoggle == true) {
                         for (const entry of this.tableData) {
-                           // console.log('entry ::',entry);
                             for (const header of Object.keys(entry)) {
-                              //  console.log('header firstt:',header);
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
                                     try {
                                         var keyData = entry[header];
                                         if (keyData != null && typeof keyData == 'object' && this.fieldTypeMap[header] !== 'ADDRESS') { //
                                             for (const objKey of Object.keys(keyData)) {
-                                               // console.log('header :',header);
-                                               // console.log('obj key ::',objKey);
                                                 if (objKey !== 'attributes' && objKey !== 'Id') {
-                                                    console.log('entered');
                                                     //Getting column header name for reference object field.
                                                     let relatedLabel = await getrelatedFieldName({ objectName: header, fieldName: objKey });
-                                                  //  console.log('related label ::',relatedLabel);
                                                     if (!this.tableHeaderLabel.includes(relatedLabel) && relatedLabel !== null) {
                                                         this.tableHeaderLabel.push(relatedLabel);
                                                         this.relatedLabelMap[relatedLabel] = header + '.' + objKey;
@@ -290,7 +560,6 @@ export default class DynamicDataTable extends LightningElement {
                                         else {
                                             ////Getting column header name for field.
                                             label = await getFieldName({ query: this.soql, fieldName: header });
-                                            console.log('label ::',label);
                                             this.tableHeaderLabel.push(label);
                                             this.relatedLabelMap[label] = header;
                                             this.tableHeaders.push(header);
@@ -381,9 +650,9 @@ export default class DynamicDataTable extends LightningElement {
                     this.tableDataPn = [...this.tableDataPn, ...this.tableDataQuery];
                     this.tableDataPn = ensureObjectsWithNullProperties(this.tableDataPn);
                     this.isLoaded = false;
-                    console.log('table header ::',this.tableHeaders);
-                    console.log('table header label ::',this.tableHeaderLabel);
                     this.isLoading = false;
+                    this.isLoadingData = false;
+
                     this.scrolled = false;
                     if (this.stopColumnRender == true) {
                         this.stopColumnRender = false;
@@ -391,7 +660,9 @@ export default class DynamicDataTable extends LightningElement {
                 }
             })
             .catch(error => {
+
                 this.isLoading = false;
+                this.isLoadingData = false;
                 this.tableData = false;
                 this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
             });
@@ -402,7 +673,9 @@ export default class DynamicDataTable extends LightningElement {
     renderedCallback() {
 
         if (this.tableDataPn && this.tableDataPn.length > 0 && !this.stopColumnRender) {
+
             this.populateTableBody();
+
         }
         else if (this.stopColumnRender) {
         }
@@ -410,6 +683,7 @@ export default class DynamicDataTable extends LightningElement {
 
     // Function to populate the table body.
     populateTableBody() {
+
         try {
             //Function to check if a value is a valid ID
             function isId(value) {
@@ -422,6 +696,7 @@ export default class DynamicDataTable extends LightningElement {
             tbody.innerHTML = '';
 
             this.visibleData.forEach(row => {
+
                 function forAnyId(row) {
                     return row.Id || row.id || row.ID;
                 }
@@ -494,18 +769,18 @@ export default class DynamicDataTable extends LightningElement {
 
                                     }
                                     else if (!this.isUpdatableMap[header]) {
-                                        if(typeof row[header.split('.')[0]][header.split('.')[1]] == 'object'){
-                                            // console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
-                                             td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '' ).join(',');
-                                             td.dataset.header = header;
-                                             td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
-                                            }
-                                            else{
-                                                td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                        td.dataset.header = header;
-                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                            }
-                                        
+                                        if (typeof row[header.split('.')[0]][header.split('.')[1]] == 'object') {
+
+                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '').join(',');
+                                            td.dataset.header = header;
+                                            td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
+                                        }
+                                        else {
+                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                            td.dataset.header = header;
+                                            td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                        }
+
                                     }
                                     else if (this.fieldTypeMap[header] == 'DATE') {
                                         if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
@@ -586,25 +861,22 @@ export default class DynamicDataTable extends LightningElement {
 
                             }
                             else if ((!this.isUpdatableMap[header] && header !== 'Name') || (this.isUpdatableMap[header] && isId(row[header]) && header !== 'Name')) {
-                               console.log('update here');
-                               console.log('row data ::',row[header]);
-                            //    console.log('row data ::',Object.values(row[header]));
-                               console.log('type od data ::',typeof row[header]);
-                               if(typeof row[header] == 'object'){
-                                console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
-                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
-                                td.dataset.header = header;
-                                td.dataset.value = Object.values(row[header]);
-                               }
-                               else{
-                                td.textContent = row[header] == undefined ? '' : row[header];
-                                td.dataset.header = header;
-                                td.dataset.value = row[header];
-                               }
-                                
+
+                                if (typeof row[header] == 'object') {
+
+                                    td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
+                                    td.dataset.header = header;
+                                    td.dataset.value = Object.values(row[header]);
+                                }
+                                else {
+                                    td.textContent = row[header] == undefined ? '' : row[header];
+                                    td.dataset.header = header;
+                                    td.dataset.value = row[header];
+                                }
+
                             }
                             else {
-                                console.log('entered here:');
+
                                 if (this.fieldTypeMap[header] == 'BOOLEAN' && this.isUpdatableMap[header]) {
                                     td.textContent = row[header];
                                     td.dataset.header = header;
@@ -653,7 +925,7 @@ export default class DynamicDataTable extends LightningElement {
                                     td.dataset.header = header;
                                     td.dataset.value = row[header];
                                 }
-                               
+
                                 else if (this.fieldTypeMap[header] == 'TEXTAREA') {
                                     if (row[header] == null) {
                                         td.innerHTML = '';
@@ -667,17 +939,17 @@ export default class DynamicDataTable extends LightningElement {
                                         }
                                     }
                                 }
-                                else if(this.fieldTypeMap[header] == 'ADDRESS'){
-                                    console.log('entered in address::');
-                                    
-                                        console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
-                                        td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
-                                        td.dataset.header = header;
-                                        td.dataset.value = Object.values(row[header]);
-                                       
-                                }                            
+                                else if (this.fieldTypeMap[header] == 'ADDRESS') {
+
+
+
+                                    td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
+                                    td.dataset.header = header;
+                                    td.dataset.value = Object.values(row[header]);
+
+                                }
                                 else {
-                                    console.log('normal');
+
                                     input.value = row[header] == undefined ? '' : row[header];
                                     td.dataset.header = header;
                                     td.dataset.value = row[header];
@@ -718,24 +990,32 @@ export default class DynamicDataTable extends LightningElement {
                         }
                     }
                     else if (this.flowRecord.length > 0) {
-                        if (this.inlineEditing) {
-                            if (!isId(row[header])) {
-                                input.value = row[header] == undefined ? '' : row[header];
+
+                        if (typeof row[header] == 'object') {
+
+                            td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
+                        }
+
+
+
+                        else {
+
+                            if (typeof row[header] == 'string' && row[header].includes('<')) {
+
+                                td.innerHTML = row[header];
                             }
+
+
+
+
+
                             else {
                                 td.textContent = row[header] == undefined ? '' : row[header];
                             }
+
                         }
-                        else {
-                            if(typeof row[header] == 'object'){
-                                console.log('object');
-                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
-                            }
-                            else{
-                                td.textContent = row[header] == undefined ? '' : row[header];
-                            }
-                            
-                        }
+
+
                     }
                     else {
                         td.textContent = row[header] == undefined ? '' : row[header];
@@ -744,15 +1024,15 @@ export default class DynamicDataTable extends LightningElement {
                         td.appendChild(input);
                     }
 
-                    if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
-                        td.appendChild(input);
-                    }
+
 
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
             });
+
         } catch (error) {
+
             this.tableData = false;
             this.tableDataErrorMsg = 'There is some issue while populating data in the table';
         }
@@ -761,6 +1041,7 @@ export default class DynamicDataTable extends LightningElement {
 
     // Handle Id column visibility toggle
     handleIdColumn(event) {
+
         handleIdColumn.bind(this)(event, this);
     }
 
@@ -779,6 +1060,7 @@ export default class DynamicDataTable extends LightningElement {
 
     // Load more data when scrolled to the bottom
     loadMoreData() {
+
         this.isLoaded = true;
         this.rowOffset = this.rowSize + this.rowOffset;
         this.stopColumnRender = true;
@@ -906,18 +1188,18 @@ export default class DynamicDataTable extends LightningElement {
                                     td.appendChild(link);
                                 }
                                 else if (!this.isUpdatableMap[header]) {
-                                    if(typeof row[header.split('.')[0]][header.split('.')[1]] == 'object'){
-                                        // console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
-                                         td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '' ).join(',');
-                                         td.dataset.header = header;
-                                         td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
-                                        }
-                                        else{
-                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                            td.dataset.header = header;
-                                            td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                        }
-                                   
+                                    if (typeof row[header.split('.')[0]][header.split('.')[1]] == 'object') {
+                                        // //console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
+                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '').join(',');
+                                        td.dataset.header = header;
+                                        td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
+                                    }
+                                    else {
+                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
+                                        td.dataset.header = header;
+                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
+                                    }
+
                                 }
                                 else if (this.fieldTypeMap[header] == 'DATE') {
 
@@ -965,8 +1247,8 @@ export default class DynamicDataTable extends LightningElement {
                                     td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
                                     td.dataset.id = row[header.split('.')[0]]['Id'];
                                 }
-                                else if(this.fieldTypeMap[header] == 'ADDRESS'){
-                                    td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '' ).join(',');
+                                else if (this.fieldTypeMap[header] == 'ADDRESS') {
+                                    td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '').join(',');
                                     td.dataset.header = header;
                                     td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
                                 }
@@ -989,18 +1271,18 @@ export default class DynamicDataTable extends LightningElement {
                             td.appendChild(link);
                         }
                         else if ((!this.isUpdatableMap[header] && header !== 'Name') || (this.isUpdatableMap[header] && isId(row[header]) && header !== 'Name')) {
-                            if(typeof row[header] == 'object'){
-                               // console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
-                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
+                            if (typeof row[header] == 'object') {
+
+                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
                                 td.dataset.header = header;
                                 td.dataset.value = Object.values(row[header]);
-                               }
-                          else{
-                            td.textContent = row[header] == undefined ? '' : row[header];
-                            td.dataset.header = header;
-                            td.dataset.value = row[header];
-                          }
-                            
+                            }
+                            else {
+                                td.textContent = row[header] == undefined ? '' : row[header];
+                                td.dataset.header = header;
+                                td.dataset.value = row[header];
+                            }
+
                         }
                         else {
                             if (this.fieldTypeMap[header] == 'BOOLEAN' && this.isUpdatableMap[header]) {
@@ -1058,8 +1340,8 @@ export default class DynamicDataTable extends LightningElement {
                                     }
                                 }
                             }
-                            else if(this.fieldTypeMap[header] == 'ADDRESS'){
-                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '' ).join(',');
+                            else if (this.fieldTypeMap[header] == 'ADDRESS') {
+                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
                                 td.dataset.header = header;
                                 td.dataset.value = Object.values(row[header]);
                             }
@@ -1103,17 +1385,29 @@ export default class DynamicDataTable extends LightningElement {
                     }
                 }
                 else if (this.flowRecord.length > 0) {
-                    if (this.inlineEditing) {
-                        if (!isId(row[header])) {
-                            input.value = row[header] == undefined ? '' : row[header];
+
+                    if (typeof row[header] == 'object') {
+
+                        td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
+                    }
+
+                    else {
+
+                        if (typeof row[header] == 'string' && row[header].includes('<')) {
+
+                            td.innerHTML = row[header];
                         }
+
+
+
+
+
                         else {
                             td.textContent = row[header] == undefined ? '' : row[header];
                         }
+
                     }
-                    else {
-                        td.textContent = row[header] == undefined ? '' : row[header];
-                    }
+
                 }
                 else {
                     td.textContent = row[header] == undefined ? '' : row[header];
@@ -1122,9 +1416,7 @@ export default class DynamicDataTable extends LightningElement {
                 if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA' || header.split('.')[1] == 'Name')) {
                     td.appendChild(input);
                 }
-                if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
-                    td.appendChild(input);
-                }
+
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
@@ -1138,7 +1430,7 @@ export default class DynamicDataTable extends LightningElement {
 
     //Handle Column filter search.
     handleInputChange(event) {
-        handleInputChange.bind(this)(event, this.soql, this.relatedLabelMap, this.columnFilters, this.filteredData, this.visibleData,
+        handleInputChange.bind(this)(event, this.soql, this.relatedLabelMap, this.columnFilters, this.visibleData,
             this.dataToSort, this.stopColumnRender, this.checkForFilteredList, this, this.template, this.totalRecords, this.showSubmit,
             this.editedIds);
 
@@ -1146,6 +1438,7 @@ export default class DynamicDataTable extends LightningElement {
 
     //Reset the table to its original state, clearing filters and selections
     handleReset() {
+
         handleReset.bind(this)(this.template, this.selectedRows, this.showInput, this.showSubmit, this.editedIds
             , this.filteredData, this);
     }
@@ -1369,7 +1662,7 @@ export default class DynamicDataTable extends LightningElement {
             target.appendChild(select);
         }
 
-        else if (target.tagName === 'TD' && target.dataset.type === 'DATE' && this.inlineEditing && target.dataset.id !== ''  ) {
+        else if (target.tagName === 'TD' && target.dataset.type === 'DATE' && this.inlineEditing && target.dataset.id !== '') {
             const input = document.createElement('input');
             input.type = 'date';
             let currentDate = target.textContent.trim();
@@ -1647,10 +1940,7 @@ export default class DynamicDataTable extends LightningElement {
                                     const hiddenIdCell = tr.querySelector('td:first-child');
                                     const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
                                     if (hiddenId && selectedLabelinLi !== 'No Data Available') {
-                                        console.log('selectedLabelinLi ::', selectedLabelinLi);
-                                        console.log('selectedValueinLi ::', selectedValueinLi);
 
-                                        console.log('currentVal ::', currentVal);
                                         if (!this.editedIds.includes(hiddenId.value) && selectedLabelinLi !== currentVal) {
                                             this.editedIds.push(hiddenId.value);
                                             this.showSubmit = true;
@@ -1677,31 +1967,22 @@ export default class DynamicDataTable extends LightningElement {
                         }
                     }
                     else {
-                        console.log('no value cond.');
-                        console.log('input val :', input1.value);
+
                         target.dataset.value = '';
                         target.dataset.edited = 'true';
                         currentVal = '';
-                        console.log('target val :', target.dataset.value);
+
                         const hiddenIdCell = tr.querySelector('td:first-child');
                         const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
-                        if (hiddenId) { //&& selectedLabelinLi !== 'No Data Available'
-                            if (!this.editedIds.includes(hiddenId.value)) { //&& selectedLabelinLi !== currentVal
+                        if (hiddenId) {
+                            if (!this.editedIds.includes(hiddenId.value)) {
                                 this.editedIds.push(hiddenId.value);
                                 this.showSubmit = true;
                                 this.stopColumnRender = true;
                             }
-                            // else if (selectedLabelinLi == currentVal) {
-                            //     let index = this.editedIds.indexOf(hiddenId.value);
-                            //     if (index !== -1) {
-                            //         this.editedIds.splice(index, 1);
-                            //     }
-                            //     if (this.editedIds.length == 0) {
-                            //         this.showSubmit = false;
-                            //     }
-                            // }
+
                         }
-                        console.log('edited id :', this.editedIds);
+
                         this.accountNames = [];
                         dropdownDiv.style.display = 'none';
                     }
@@ -1710,13 +1991,10 @@ export default class DynamicDataTable extends LightningElement {
             })
 
             document.addEventListener('click', function handleOutsideClick(event) {
-                console.log('clicked outside');
+
                 if (!target.contains(event.target) && !dropdownDiv.contains(event.target)) {
 
-                    console.log('selectedLabelinLi  ::', selectedLabelinLi);
-                    console.log('selectedValueinLi  ::', selectedValueinLi);
-                    console.log('currentVal  ::', currentVal);
-                    console.log('target.value  ::', target.dataset.value);
+
                     if (selectedLabelinLi == 'No Data Available' || (selectedLabelinLi == currentVal && currentVal != '')) {
                         dropdownDiv.style.display = 'none';
                         const link = document.createElement('a');
@@ -1726,14 +2004,14 @@ export default class DynamicDataTable extends LightningElement {
                         target.appendChild(link);
                     }
                     else if (selectedLabelinLi == currentVal && currentVal == '' && selectedValueinLi == undefined) {
-                        console.log('entered');
+
                         dropdownDiv.style.display = 'none';
                         target.innerHTML = '';
 
                     }
-                    else if(selectedLabelinLi == '' && currentVal!==''){
+                    else if (selectedLabelinLi == '' && currentVal !== '') {
 
- dropdownDiv.style.display = 'none';
+                        dropdownDiv.style.display = 'none';
                         const link = document.createElement('a');
                         link.href = target.dataset.linkid;
                         link.textContent = currentVal;
@@ -1878,7 +2156,7 @@ export default class DynamicDataTable extends LightningElement {
                                 if (checkbox) {
                                     const header = this.tableHeaders[index - 2];
                                     if (this.fieldTypeMap[header] !== 'PICKLIST' && this.fieldTypeMap[header] !== 'DATE' && this.fieldTypeMap[header] !== 'DATETIME' && this.fieldTypeMap[header] !== 'BOOLEAN' && td.dataset.lookup !== 'LOOKUPNAME') {
-                                        if ((this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value) && input.value !== '') || (this.fieldTypeMap[header] == 'URL' && !validateUrl(input.value) &&  input.value !== '')) {
+                                        if ((this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value) && input.value !== '') || (this.fieldTypeMap[header] == 'URL' && !validateUrl(input.value) && input.value !== '')) {
                                             input.style.border = '2px solid red';
                                             this.errorToastMessage = true;
                                             this.errorMsg = (this.fieldTypeMap[header] == 'EMAIL')
@@ -1904,10 +2182,10 @@ export default class DynamicDataTable extends LightningElement {
                                             editedRow[header] = select.value;
                                         }
                                         else {
-                                            console.log('header :',header);
+
                                             let obj = this.processedDataForJson(header, hiddenCol.value, select.value);
                                             relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                            console.log('related edited row ::',relatedEditedRow);
+
                                         }
                                     }
                                     else if (td.dataset.type === 'DATE' && td.dataset.edited === 'true') {
@@ -1958,7 +2236,7 @@ export default class DynamicDataTable extends LightningElement {
                                             }
                                         }
                                         editedRow['Id'] = hiddenCol.value;
-                                        console.log('look up name ::', td.dataset.value);
+
                                         editedRow[newHeader] = td.dataset.value;
                                     }
                                 }
@@ -2083,7 +2361,7 @@ export default class DynamicDataTable extends LightningElement {
             if (this.hasError) {
                 return;
             }
-            console.log('json data ::', jsonData);
+
             // Saving the data to database
             const result = await updateSObject({ jsonData: JSON.stringify(jsonData) })
 
@@ -2132,23 +2410,22 @@ export default class DynamicDataTable extends LightningElement {
                     for (const td of tds) {
                         if (td && td.dataset.edited == 'true') {
                             const referenceFieldData2 = this.getReferenceFieldData2(jsonData);
-                            console.log('referenceFieldData2', referenceFieldData2);
+
                             const updatedRecords2 = await getRelatedRecords({ referenceData: referenceFieldData2 });
-                            console.log('updatedRecords2', updatedRecords2);
+
 
                             updatedRecords2.forEach((editedEntry) => {
                                 let idToUpdate = editedEntry.Id;
                                 this.globalData = this.globalData.map((entry) => {
 
                                     if (entry.Id == idToUpdate) {
-                                        console.log('entry', entry);
-                                        console.log('editedEntry', editedEntry);
+
 
                                         Object.keys(entry).forEach((key) => {
                                             if (typeof entry[key] === 'object' && entry[key] !== null) {
                                                 if (!(key in editedEntry) && key !== 'attributes') {
                                                     // If the object itself is missing, set it to null
-                                                    // editedEntry[key] = {};
+
                                                     editedEntry[key] = { ...entry[key] }; // Copy the object structure
                                                     Object.keys(entry[key]).forEach((subKey) => {
                                                         if ((subKey in editedEntry[key]) && subKey !== 'attributes') {
@@ -2163,21 +2440,21 @@ export default class DynamicDataTable extends LightningElement {
                                                         }
                                                     });
                                                 }
-                                                console.log('editedEntry[key] first', editedEntry[key]);
+
                                             }
                                             else {
-                                                console.log('other cond.', key);
+
                                                 if (!(key in editedEntry) && key !== 'attributes') {
                                                     editedEntry[key] = '';
-                                                    console.log('key', key);
+
                                                 }
-                                                console.log('editedEntry[key]', editedEntry[key]);
+
 
                                             }
 
                                         });
                                         const updatedEntry = { ...entry, ...editedEntry };
-                                        console.log('updatedEntry 1 ::', updatedEntry);
+
                                         return updatedEntry;
                                     }
                                     return entry;
@@ -2186,7 +2463,7 @@ export default class DynamicDataTable extends LightningElement {
                         }
                     }
                 }
-                console.log('global data ::', this.globalData);
+
                 this.successToastMessage = true;
                 this.successMsg = result;
                 this.successToastMessage = true;
@@ -2197,14 +2474,14 @@ export default class DynamicDataTable extends LightningElement {
                         if (entry.Id === idToUpdate) {
 
                             const updatedEntry = { ...entry, ...editedEntry };
-                            console.log('updated Entry below  ::', updatedEntry);
+
                             for (let key in updatedEntry) {
 
                                 if (updatedEntry[key] === '--None--') {
                                     updatedEntry[key] = '';
                                 }
                             }
-                            console.log('updatedEntry 2 ::', updatedEntry);
+
 
                             return updatedEntry;
                         }
@@ -2337,8 +2614,7 @@ export default class DynamicDataTable extends LightningElement {
             }
 
             this.globalData.find((entry) => {
-                console.log('entry [newHeader]  ::',entry[newHeader]);
-                console.log('entry is :: ',entry);
+
                 if (entry.Id == hiddenColVal && entry[newHeader] !== undefined && entry[newHeader] !== '') {
                     td.style.border = '2px solid red';
                     this.errorToastMessage = true;

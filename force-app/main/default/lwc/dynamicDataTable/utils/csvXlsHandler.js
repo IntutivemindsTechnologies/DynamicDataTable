@@ -1,4 +1,3 @@
-
 let handleCsvData = (selectedRows,globalData,tableHeaderLabel,tableHeaders) => {
     let downloadRecords = [];
     if (selectedRows.length > 0) {

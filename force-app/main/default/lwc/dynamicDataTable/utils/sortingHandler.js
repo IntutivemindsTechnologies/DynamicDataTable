@@ -1,4 +1,3 @@
-
 const handleSort = (event, dataToSort, showSubmit, editedIds, selectedHeaderId, activeHeader, sortedBy, sortedDirection, soql, relatedLabelMap, template, component) => {
 
 
@@ -173,5 +172,3 @@ let sortData = (field, direction, selectedField, template, dataToSort) => {
     }
 }
 export { handleSort, sortData };
-
-

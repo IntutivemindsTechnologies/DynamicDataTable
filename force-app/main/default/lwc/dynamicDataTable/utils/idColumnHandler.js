@@ -1,5 +1,5 @@
 let handleIdColumn = (event,component) => {
-   
+  
     if (component.visibleData.length === 0) {
         event.preventDefault();
         event.target.checked = component.toggleIdColumn;
@@ -13,6 +13,7 @@ let handleIdColumn = (event,component) => {
 
 
     if (component.visibleData.length > 0 && component.filteredData.length > 0) {
+
         component.toggleIdColumn = !component.toggleIdColumn;
         component.showSubmit = false;
         component.editedIds = [];
@@ -32,6 +33,7 @@ let handleIdColumn = (event,component) => {
         }
     }
     else {
+
         component.toggleIdColumn = !component.toggleIdColumn;
         component.showSubmit = false;
         component.editedIds = [];
