@@ -1,4 +1,5 @@
-// Handle the start of a drag event for column header
+
+ // Handle the start of a drag event for column header
 let handleDragStart= (event,showSubmit,editedIds,template,component) => {
     component.showSubmit = false;
     component.editedIds = [];

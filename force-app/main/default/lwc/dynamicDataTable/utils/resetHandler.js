@@ -1,15 +1,16 @@
-let handleReset = (template,selectedRows,showInput,showSubmit,editedIds,filteredData,component ) => {
-    console.log('reset ');
-    const inputElement = component.template.querySelector('[data-id="searchInput"]');
+
+ 
+ let handleReset = (template,selectedRows,showInput,showSubmit,editedIds,filteredData,component ) => {
+    const inputElement = template.querySelector('[data-id="searchInput"]');
     inputElement.value = '';
-    const checkboxes = component.template.querySelectorAll('input[type="checkbox"]');
+    const checkboxes = template.querySelectorAll('input[type="checkbox"]');
 
     checkboxes.forEach(checkbox => {
         checkbox.checked = false;
     });
-    component.selectedRows = [];
+    selectedRows = [];
 
-    const allArrowIcons = component.template.querySelectorAll('lightning-icon');
+    const allArrowIcons = template.querySelectorAll('lightning-icon');
     allArrowIcons.forEach(icon => {
         icon.classList.remove('arrowIconShow');
 
@@ -17,8 +18,7 @@ let handleReset = (template,selectedRows,showInput,showSubmit,editedIds,filtered
     component.showInput = false;
     component.showSubmit = false;
     component.editedIds = [];
-    component.filteredData = [];
-    component.columnFilters = {};
+    filteredData = [];
     component.populateTableBody();
 
 }

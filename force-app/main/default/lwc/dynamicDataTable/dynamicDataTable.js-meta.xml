@@ -14,27 +14,23 @@
 <targetConfigs>
 <targetConfig targets="lightning__HomePage,lightning__RecordPage, lightning__AppPage">
 
-<property name="jsonData" type="Boolean" default="false" label="Enable JSON Data"  description="This feature allows Enable/Disable Text Area for JSON data in DynamicDataTable"/>
-<property name="soqlData" type="Boolean" default="false" label="Enable Soql Query"  description="This feature allows Enable/Disable Soql Query in DynamicDataTable"/>
-
+<property name="tableData" type="String"  label="DataSource [JSON/SOQL]" description="Please enter a valid JSON or SOQL query" />
 <property name="checkBoxVisibile" type="Boolean" default="false" label="Enable Row Selection"  description="This feature allows Enable/Disable row selection in DynamicDataTable"/>
-<property name="objectLabelFromProperty" type="String"  label="Header Text" description="Override header for DynamicDataTable" />
-<property name="showtoggleProperty" type="Boolean"  default="false" label="Enable Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
+<property name="objectLabel" type="String"  label="Header Text" description="Override header for DynamicDataTable" />
+<property name="showtoggle" type="Boolean"  default="false" label="Enable Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
 <property name="inlineEditing" type="Boolean" default="false" label="Enable In-Line Editing (Not applicable in JSON input)" />
 <property name="exportData" type="Boolean" default="false" label="Enable Data Export" description="This feature allow you to export the data of DynamicDataTable"/>
 </targetConfig>
 
 <targetConfig targets="lightning__FlowScreen">
 
-<property name="jsonData" type="Boolean" default="false" label="Enable JSON Data"  description="This feature allows Enable/Disable Text Area for JSON data in DynamicDataTable"/>
-<property name="soqlData" type="Boolean" default="false" label="Enable Soql Query"  description="This feature allows Enable/Disable Soql Query in DynamicDataTable"/> 
-
+<property name="tableData" type="String"  label="DataSource [JSON/SOQL]" role="inputOnly" description="Please enter a valid JSON or SOQL query"/>
 <propertyType name="T" extends="SObject" label="Select SObject"  />        
 <property name="flowRecord" type="{T[]}" label="Set FlowRecord" role="inputOnly" description="Enter FlowRecord Input"/>
 <property name="output" type="String" role="outputOnly" />
 <property name="checkBoxVisibile" type="Boolean" label="Enable Row Selection" default="false" role="inputOnly" description="This feature allows Enable/Disable row selection in DynamicDataTable"/>
-<property name="objectLabelFromProperty" type="String"  label="Header Text" role="inputOnly" description="Override header for DynamicDataTable" />
-<property name="showtoggleProperty" type="Boolean"  default="false" label="Enable Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
+<property name="objectLabel" type="String"  label="Header Text" role="inputOnly" description="Override header for DynamicDataTable" />
+<property name="showtoggle" type="Boolean"  default="false" label="Enable Toggle IDs" description="This feature allow you to show/hide record Ids in DynamicDataTable"  />
 <property name="inlineEditing" type="Boolean" default="false" label="Enable In-Line Editing (Not applicable in JSON input)" />
 <property name="exportData" type="Boolean" default="false" label="Enable Data Export" description="This feature allow you to export the data of DynamicDataTable"/>
 </targetConfig>
