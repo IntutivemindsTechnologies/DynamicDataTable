@@ -19,3 +19,15 @@ declare module "@salesforce/apex/DynamicDataTableHandler.getObjectLabelName" {
 declare module "@salesforce/apex/DynamicDataTableHandler.iconNamesForObjects" {
   export default function iconNamesForObjects(param: {query: any}): Promise<any>;
 }
+declare module "@salesforce/apex/DynamicDataTableHandler.updateSObject" {
+  export default function updateSObject(param: {jsonData: any}): Promise<any>;
+}
+declare module "@salesforce/apex/DynamicDataTableHandler.getMapofTypeForFields" {
+  export default function getMapofTypeForFields(param: {query: any}): Promise<any>;
+}
+declare module "@salesforce/apex/DynamicDataTableHandler.getPicklistValue" {
+  export default function getPicklistValue(param: {query: any, field: any}): Promise<any>;
+}
+declare module "@salesforce/apex/DynamicDataTableHandler.getMapofRequiredField" {
+  export default function getMapofRequiredField(param: {query: any}): Promise<any>;
+}

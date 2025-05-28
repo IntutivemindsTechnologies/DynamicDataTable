@@ -1,39 +1,15 @@
 import { LightningElement, api, track } from 'lwc';
 import getFieldName from '@salesforce/apex/DynamicDataTableHandler.getFieldName';
 import getrelatedFieldName from '@salesforce/apex/DynamicDataTableHandler.getrelatedFieldName';
-import getUpdateStatusNew from '@salesforce/apex/DynamicDataTableHandler.getUpdateStatusNew';
+import getUpdateStatus from '@salesforce/apex/DynamicDataTableHandler.getUpdateStatus';
 import getList from '@salesforce/apex/DynamicDataTableHandler.getDataFromQuery';
 import getObjectLabelName from '@salesforce/apex/DynamicDataTableHandler.getObjectLabelName';
 import iconNamesForObjects from '@salesforce/apex/DynamicDataTableHandler.iconNamesForObjects';
 import updateSObject from '@salesforce/apex/DynamicDataTableHandler.updateSObject';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getMapofTypeForFields from '@salesforce/apex/DynamicDataTableHandler.getMapofTypeForFields';
 import getPicklistValue from '@salesforce/apex/DynamicDataTableHandler.getPicklistValue';
 import getMapofRequiredField from '@salesforce/apex/DynamicDataTableHandler.getMapofRequiredField';
-import getNamesOfObject from '@salesforce/apex/DynamicDataTableHandler.getNamesOfObject';
-import getRelatedRecords from '@salesforce/apex/DynamicDataTableHandler.getRelatedRecords';
-import getRelatedPicklistValue from '@salesforce/apex/DynamicDataTableHandler.getRelatedPicklistValue';
-import { handleSort, sortData } from "./utils/sortingHandler";
-import { handleDragStart, handleDrop } from "./utils/columnDragHandler";
-import { handleKeyUp, searchTable } from "./utils/globalFilterHandler";
-import { handleInputChange } from "./utils/columnFilterHandler";
-import { handleReset } from "./utils/resetHandler";
-import { handleCsvData, convertToCsvFile, createDownload, handleExcelData, createXlsDownload } from "./utils/csvXlsHandler";
-import { checkAllCheckboxes } from "./utils/mainCheckBoxHandler";
-import { handleCheckboxChange } from "./utils/singleCheckBoxHandler";
-import { handleScroll } from "./utils/scrollHandler";
-import { handleIdColumn } from "./utils/idColumnHandler";
-import { handleGlobalReset } from "./utils/globalResetHandler";
-import { resetVariables } from "./utils/resetVariablesHandler";
-import { handleOpenDataSource } from "./utils/openDataSource";
-import { handleDropChange } from "./utils/dataSourceDropdown";
-import { handleJsonDataClickSec } from "./utils/mainJsonDataClick";
-import { handleJsonDataClick } from "./utils/componentJsonDataClick";
-import { handleOptionSelect } from "./utils/queryOptionSelect";
-import { handleFileCLick } from "./utils/fileDropdownHandler";
-import { handleGlobalReset2 } from "./utils/globalResetSec";
-import { toggleDrawer } from "./utils/settingPopup";
-import getQueryValues from '@salesforce/apex/DynamicDataTableHandler.getQueryValues';
-
 
 
 export default class DynamicDataTable extends LightningElement {
@@ -49,7 +25,7 @@ export default class DynamicDataTable extends LightningElement {
     showInput = false;
     selectedHeaderId = '';
     columnFilters = {};
-    @api stopColumnRender = false;
+    stopColumnRender = false;
     @api tableDataCheckBox;
     @api selectedRows = [];
     isMainCheckboxChecked = false;
@@ -62,9 +38,9 @@ export default class DynamicDataTable extends LightningElement {
     @api relatedLabelMap = {};
     @api isUpdatable;
     @api isUpdatableMap = {};
-    tableHeaderToRemove = [];
+    @api tableHeaderToRemove = [];
     @track toggleIdColumn = true;
-    tableHeaderLabelToRemove = [];
+    @api tableHeaderLabelToRemove = [];
     @api rowSize = 10;
     @api rowOffset = 0;
     @api showSpinner = false;
@@ -72,10 +48,8 @@ export default class DynamicDataTable extends LightningElement {
     enableInfiniteLoading = false;
     totalRecords = 0;
     showSubmit = false;
-    @api objectLabelFromProperty;
     @api objectLabel;
     isLoading = true;
-    isLoadingData = false;
     iconName;
     @api showReferenceToggle = false;
     @api globalSearchResult = [];
@@ -87,318 +61,43 @@ export default class DynamicDataTable extends LightningElement {
     @api globalSearchCloseFilterData;
     @api isIdColumnVisible = false;
     @track scrolled = false;
-    @api filteredData = [];
+    filteredData = [];
     @api checkForFilteredList;
     @api checkBoxVisibile = false;
     @api showtoggle = false;
-    @api editedIds = [];
-    @api fieldTypeMap = {};
-    @api requiredFieldMap = {};
-    @api pickListChange = false;
-    @api handleKeyup = null;
-    @api handleBlur = null;
-    successToastMessage;
-    errorToastMessage;
-    @api exportData;
-    @api showExportButtons = false;
-    showSearchLookUp1 = true;
-    showSearchLookup2 = true;
-    childLookup = true;
-    objectNameForChild;
-    fieldNameForChild;
-    inputValueForChild;
-    @track selectedTdElement;
-    dynamicInstance;
-    @track accountNames = [];
-    debounceTimeout;
-    hidColId = [];
-    hasError = false;
-    @api jsonData = false;
-    @api soqlData = false;
-    @api statusOptions;
-    queryData = false;
-    @track isChecked = false;
-    @api customQuery;
-    @api jsonDataa = false;
-    @api soqlDataa = false;
-    @track value1;
-    @api value2;
-    @api value3;
-    @track disableJsonValidation = false;
-    @api isJsonValid;
-    @api isSoqlValid;
-    @api flowData = false;
-    @api jsonTextBox = false;
-    @api soqlDropdown = false;
-    @api queryDropdownData;
-    @api customErrorMessage;
-    @api showCustomError = false;
-    @api mainDropdownVal;
-    @api showtoggleProperty;
-    @api getOpen = false;
-    @api dropdownOpen;
-    @track selectedLabel = 'Select an Option…';
-    @api soqlLoadData = false;
-    @api lastUpdatedTime = new Date();
-    @track isDrawerOpen = false;
-    @api firstBox;
-    @api isFileDropdown = false;
-    @api isAdditionalFunction;
-    @api drawerStyle;
-    @api isDrawerVisible = false;
-    @api isDrawerOpennn = false;
-    @track jsonInput = '';
-    @track soqlInput = '';
-    @track isSettingPopup;
-
-
-
-
-    get isButtonDisabled() {
-        return !this.jsonInput || this.jsonInput.trim().length === 0;
-    }
+    @api editedIds=[];
+    @api fieldTypeMap={};
+    @api requiredFieldMap={};
+    @api pickListChange=false;
+    @api handleKeyup=null;
+    @api handleBlur=null;
+     successToastMessage;
+     errorToastMessage;
   
-    // To get value in Json Textbox
-    handleJsonInputChange(event) {
-        this.jsonInput = event.target.value;
-    }
 
 
-    get isSoqlButtonDisabled() {
-        return !this.soqlInput || this.soqlInput.trim().length === 0;
-    }
-
-    // To get value in Soql Textbox
-    handleSoqlnInputChange(event) {
-        this.soqlInput = event.target.value;
-    }
-
-    get drawerClass() {
-        return this.isDrawerOpen ? 'drawer slide-in' : 'drawer slide-out';
-
-    }
-
-    // To handle file outside click
-    handleFileOutsideClick = (event) => {
-        try {
-            const dropdown = this.template.querySelector('.dropdown-container');
-            if (
-                dropdown &&
-                !dropdown.contains(event.target)) {
-
-                this.isDrawerOpen = false;
-                this.isDrawerVisible = false;
-                this.template.removeEventListener('click', this.handleFileOutsideClick);
-            }
-        }
-        catch (error) {
-           
-        }
-
-    }
-
-    //To Reset variables
-    handleGlobalReset2() {
-        handleGlobalReset2.bind(this)(this);
-    }
-
-
-    // To Open the Sidebar of Datasource
-    handleOpenDataSource(event) {
-        handleOpenDataSource.bind(this)(this);
-    }
-
-
-    
-    handleSettingPopupOutClick = (event) => {
-        try {
-            const dropdown = this.template.querySelector('.addSetting');
-            const settingIcon = this.template.querySelector('.trigger-icon');
-
-            if (dropdown && !dropdown.contains(event.target) && settingIcon && !settingIcon.contains(event.target)) {
-                this.isSettingPopup = false;
-                this.template.removeEventListener('click', this.handleSettingPopupOutClick);
-            }
-        }
-        catch (error) {
-            
-        }
-    }
-
-    //To Open Popup from Setting Icon
-    toggleDrawer() {
-        toggleDrawer.bind(this)(this);
-    }
-
-    //To Open Popup for downloading files
-    handleFileCLick() {
-        handleFileCLick.bind(this)(this);
-    }
-
-
-    handleAdditionalFuncOutClick = (event) => {
-        try {
-            const dropdown = this.template.querySelector('.addFile');
-            const toggleIcon = this.template.querySelector('.combo-button');
-
-            if (dropdown && !dropdown.contains(event.target) && toggleIcon && !toggleIcon.contains(event.target)) {
-                this.isFileDropdown = false;
-                this.template.removeEventListener('click', this.handleAdditionalFuncOutClick);
-            }
-        }
-        catch (error) {
-
-        }
-    }
-
-
-    get timeAgo() {
-        if (!this.lastUpdatedTime) return '';
-        const now = new Date();
-        const updated = new Date(this.lastUpdatedTime);
-        const diffMs = now - updated;
-        const diffSec = Math.floor(diffMs / 1000);
-        const diffMin = Math.floor(diffSec / 60);
-        const diffHr = Math.floor(diffMin / 60);
-        const diffDay = Math.floor(diffHr / 24);
-
-        if (diffSec < 60) return `few seconds ago`;
-        if (diffMin < 60) return `${diffMin} minutes ago`;
-        if (diffHr < 24) return `${diffHr} hour ago`;
-        return `${diffDay} day ago`;
-    }
-
-
-    get dropdownTriggerClass() {
-        return `slds-combobox slds-dropdown-trigger slds-dropdown-trigger_click ${this.dropdownOpen ? 'slds-is-open' : ''}`;
-    }
-
-    //To toggle the SOQL Query dropdown
-    toggleDropdown() {
-        this.dropdownOpen = !this.dropdownOpen;
-    }
-
-    // To Select option from SOQL Query Dropdown
-    handleOptionSelect(event) {
-        handleOptionSelect.bind(this)(event, this);
-    }
-
-    get dropdownOptions() {
-        const options = [];
-
-        if (this.flowRecord.length > 0) {
-            options.push({ label: 'Flow Data', value: 'flowdata' });
-        }
-        if (this.jsonData) {
-            options.push({ label: 'JSON Data', value: 'jsondata' });
-        }
-        if (this.soqlData) {
-            options.push({ label: 'SOQL Data', value: 'soqldata' });
-        }
-        return options;
-    }
-
-    //To Reset all the Datasource Dropdown Value
-    handleGlobalReset(event) {
-        handleGlobalReset.bind(this)(this);
-
-    }
- 
-    //To Reset all the variables of Datasorce
-    resetVariables() {
-        resetVariables.bind(this)(this);
-    }
-    
-    //To handle selection from DataSource Dropdown
-    handleDropChange(event) {
-        handleDropChange.bind(this)(event, this);
-    }
-
-    get isTextAreaValid() {
-        return !this.isChecked;
-    }
-
-
-    handleDropdownClick = (event) => {
-        event.stopPropagation();
-    };
-
-
-    handleOutsideClick = (event) => {
-        setTimeout(() => {
-            this.dropdownOpen = false;
-        }, 100);
-    }
-
-    disconnectedCallback() {
-        window.removeEventListener('click', this.handleOutsideClick);
-        clearInterval(this.interval);
-    }
 
     connectedCallback() {
-        window.addEventListener('click', this.handleOutsideClick);
-        this.firstBox = true;
-        if (this.flowRecord.length > 0) {
-            this.firstBox = false;
-            this.mainDropdownVal = 'flowdata';
-            if (this.objectLabelFromProperty == undefined) {
-                this.objectLabel = null;
-            }
-            else {
-                this.objectLabel = this.objectLabelFromProperty;
-            }
-            this.loadTableData();
-        }
 
-        getQueryValues()
-            .then(result => {
-                this.statusOptions = Object.keys(result).map(key => ({
-                    label: key,
-                    value: result[key]
-                }));
-            })
-            .catch(error => {
-
-            })
-
-    }
-
-    // To handle JSON Data Click
-    handleJsonDataClick() {
-        handleJsonDataClick.bind(this)(this);
-    }
-
-    handleJsonDataClickSec() {
-        handleJsonDataClickSec.bind(this)(this);
-    }
-    
-    //To load Data in table 
-    loadTableData() {
         if (this.tableData !== undefined) {
             try {
                 // Condition for Json input
                 if (this.tableData && this.tableData.toLowerCase().trim().indexOf("[") === 0) {
-                    setTimeout(() => {
-                        this.tableData = JSON.parse(this.tableData);
-                        this.tableHeaders = Object.keys(this.tableData[0]);
-                        this.tableHeaderLabel = this.tableHeaders;
-                        this.tableDataPn = this.tableData;
-                        this.globalData = this.tableDataPn;
-                        this.totalRecords = this.globalData.length;
-                        this.isLoading = false;
-                        this.isLoadingData = false;
-
-                        if (this.objectLabel == null) {
-                            this.objectLabel = 'JSON Data';
-                        }
-                        if (this.exportData) {
-                            this.showExportButtons = true;
-                        }
-                        this.iconName = 'standard:dataset';
-                    }, 800);
+                    this.tableData = JSON.parse(this.tableData);
+                    this.tableHeaders = Object.keys(this.tableData[0]);
+                    this.tableHeaderLabel = false;
+                    this.tableDataPn = this.tableData;
+                    this.globalData = this.tableDataPn;
+                    this.totalRecords = this.globalData.length;
+                    this.isLoading = false;
+                    if (this.objectLabel == null) {
+                        this.objectLabel = 'JSON Data';
+                    }
+                    this.iconName = 'standard:dataset';
                 }
                 // Condition for Soql input
-                else if (this.tableData && this.tableData.toLowerCase().trim().indexOf("select") === 0) { 
+                else if (this.tableData && this.tableData.toLowerCase().trim().indexOf("select") === 0) {
+                    console.log('soql query');
                     this.soql = this.tableData;
                     if (this.objectLabel == null) {
                         //Getting Object Label Name.
@@ -417,15 +116,12 @@ export default class DynamicDataTable extends LightningElement {
                 }
                 else {
                     this.isLoading = false;
-                    this.isLoadingData = false;
                     this.tableData = false;
                     this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
                 }
             }
             catch (error) {
-                console.error('error is 33 ::', JSON, stringify(error));
                 this.isLoading = false;
-                this.isLoadingData = false;
                 this.tableData = false;
                 this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
             }
@@ -437,22 +133,16 @@ export default class DynamicDataTable extends LightningElement {
         }
         // Condition for flow record input
         else if (this.flowRecord.length > 0) {
-            this.tableData = JSON.parse(JSON.stringify(this.flowRecord));
+            this.tableHeaderLabel = false;
+            this.tableData = this.flowRecord;
             this.tableHeaders = Object.keys(this.tableData[0]);
-            this.tableHeaderLabel = this.tableHeaders;
             this.tableDataPn = this.flowRecord;
             this.globalData = this.tableDataPn;
             this.isLoading = false;
-            this.enableInfiniteLoading = false;
-
             if (this.objectLabel == null) {
                 this.objectLabel = 'Flow Record Data';
             }
-            if (this.exportData) {
-                this.showExportButtons = true;
-            }
             this.iconName = 'standard:dataset';
-            this.stopColumnRender = false;
         }
         else {
             this.isLoading = false;
@@ -462,10 +152,11 @@ export default class DynamicDataTable extends LightningElement {
 
     }
 
+
+    // Fetches SOQL data and processes it
     getSoqlData() {
-        if (this.exportData) {
-            this.showExportButtons = true;
-        }
+
+
 
         //Function to check if a value is a valid ID
         function isIds(value) {
@@ -509,15 +200,19 @@ export default class DynamicDataTable extends LightningElement {
         getList({ query: this.soql, limitSize: this.rowSize, offset: this.rowOffset })
             .then(async result => {
                 this.tableData = JSON.parse(result);
-                this.fieldTypeMap = await getMapofTypeForFields({ query: this.soql });
-                this.isUpdatableMap = await getUpdateStatusNew({ query: this.soql });
-                this.requiredFieldMap = await getMapofRequiredField({ query: this.soql });
+
+
+                this.fieldTypeMap=await getMapofTypeForFields({query:this.soql});
+                 console.log('field Map  :',this.fieldTypeMap);
+
+                 this.requiredFieldMap=await getMapofRequiredField({query:this.soql});
+                 console.log('Required field Map  :',this.requiredFieldMap);
+
 
                 if (this.tableData.length === 0 && this.globalData.length === 0) {
                     this.tableData = false;
                     this.showNoDataMessage = true;
                     this.isLoading = false;
-                    this.isLoadingData = false;
                     this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
                 }
                 else {
@@ -536,17 +231,18 @@ export default class DynamicDataTable extends LightningElement {
                     }
 
                     if (this.toggleIdColumn == true && this.showtoggle == true) {
+
                         for (const entry of this.tableData) {
                             for (const header of Object.keys(entry)) {
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
                                     try {
                                         var keyData = entry[header];
-                                        if (keyData != null && typeof keyData == 'object' && this.fieldTypeMap[header] !== 'ADDRESS') { //
+                                        if (keyData != null && typeof keyData == 'object') {
                                             for (const objKey of Object.keys(keyData)) {
                                                 if (objKey !== 'attributes' && objKey !== 'Id') {
                                                     //Getting column header name for reference object field.
                                                     let relatedLabel = await getrelatedFieldName({ objectName: header, fieldName: objKey });
-                                                    if (!this.tableHeaderLabel.includes(relatedLabel) && relatedLabel !== null) {
+                                                    if (!this.tableHeaderLabel.includes(relatedLabel)) {
                                                         this.tableHeaderLabel.push(relatedLabel);
                                                         this.relatedLabelMap[relatedLabel] = header + '.' + objKey;
                                                     }
@@ -563,7 +259,9 @@ export default class DynamicDataTable extends LightningElement {
                                             this.tableHeaderLabel.push(label);
                                             this.relatedLabelMap[label] = header;
                                             this.tableHeaders.push(header);
-
+                                            //Getting the status of field whether updatable or not.
+                                            let isUpdateCheck = await getUpdateStatus({ query: this.soql, fieldName: header });
+                                            this.isUpdatableMap[header] = isUpdateCheck;
                                         }
                                     } catch (error) {
                                     }
@@ -592,7 +290,7 @@ export default class DynamicDataTable extends LightningElement {
                                 if (header !== 'attributes' && !this.tableHeaders.includes(header)) {
                                     try {
                                         var keyData = entry[header];
-                                        if (keyData != null && typeof keyData == 'object' && this.fieldTypeMap[header] !== 'ADDRESS') {
+                                        if (keyData != null && typeof keyData == 'object') {
                                             for (const objKey of Object.keys(keyData)) {
                                                 if (objKey !== 'attributes' && objKey !== 'Id') {
                                                     //Getting column header name for reference object field.
@@ -614,7 +312,9 @@ export default class DynamicDataTable extends LightningElement {
                                             this.tableHeaderLabel.push(label);
                                             this.relatedLabelMap[label] = header;
                                             this.tableHeaders.push(header);
-
+                                            //Getting the status of field whether editable or not.
+                                            let isUpdateCheck = await getUpdateStatus({ query: this.soql, fieldName: header });
+                                            this.isUpdatableMap[header] = isUpdateCheck;
                                         }
                                     } catch (error) {
                                     }
@@ -651,8 +351,6 @@ export default class DynamicDataTable extends LightningElement {
                     this.tableDataPn = ensureObjectsWithNullProperties(this.tableDataPn);
                     this.isLoaded = false;
                     this.isLoading = false;
-                    this.isLoadingData = false;
-
                     this.scrolled = false;
                     if (this.stopColumnRender == true) {
                         this.stopColumnRender = false;
@@ -660,9 +358,8 @@ export default class DynamicDataTable extends LightningElement {
                 }
             })
             .catch(error => {
-
+                console.log('error1 :',error);
                 this.isLoading = false;
-                this.isLoadingData = false;
                 this.tableData = false;
                 this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
             });
@@ -671,11 +368,8 @@ export default class DynamicDataTable extends LightningElement {
 
 
     renderedCallback() {
-
         if (this.tableDataPn && this.tableDataPn.length > 0 && !this.stopColumnRender) {
-
             this.populateTableBody();
-
         }
         else if (this.stopColumnRender) {
         }
@@ -683,7 +377,6 @@ export default class DynamicDataTable extends LightningElement {
 
     // Function to populate the table body.
     populateTableBody() {
-
         try {
             //Function to check if a value is a valid ID
             function isId(value) {
@@ -696,7 +389,6 @@ export default class DynamicDataTable extends LightningElement {
             tbody.innerHTML = '';
 
             this.visibleData.forEach(row => {
-
                 function forAnyId(row) {
                     return row.Id || row.id || row.ID;
                 }
@@ -741,16 +433,16 @@ export default class DynamicDataTable extends LightningElement {
                     tr.appendChild(checkboxCell);
                 }
 
+                console.log('table header :'+this.tableHeaders);
                 this.tableHeaders.forEach((header, index) => {
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.setAttribute('readonly', true);
                     input.style.border = 'none';
                     input.style.width = 'auto';
-                    input.style.outline = 'none';
                     const td = document.createElement('td');
                     td.dataset.type = this.fieldTypeMap[header];
-
+                   
 
                     if (this.soql) {
                         if (this.inlineEditing) {
@@ -761,97 +453,17 @@ export default class DynamicDataTable extends LightningElement {
                                         link.href = '/' + row[header.split('.')[0]]['Id'];
                                         link.target = '_blank';
                                         link.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                        td.dataset.lookup = 'LOOKUPNAME';
-                                        td.dataset.header = header;
-                                        td.dataset.id = row[header.split('.')[0]]['Id'];
-                                        td.dataset.linkid = '/' + row[header.split('.')[0]]['Id'];
                                         td.appendChild(link);
-
-                                    }
-                                    else if (!this.isUpdatableMap[header]) {
-                                        if (typeof row[header.split('.')[0]][header.split('.')[1]] == 'object') {
-
-                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '').join(',');
-                                            td.dataset.header = header;
-                                            td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
-                                        }
-                                        else {
-                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                            td.dataset.header = header;
-                                            td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                        }
-
-                                    }
-                                    else if (this.fieldTypeMap[header] == 'DATE') {
-                                        if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
-                                            const date = new Date(row[header.split('.')[0]][header.split('.')[1]]);
-                                            const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                                            td.textContent = formattedDate;
-                                        }
-                                        else {
-                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                        }
-                                        td.dataset.header = header;
-                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                        td.dataset.id = row[header.split('.')[0]]['Id'];
-
-                                    }
-                                    else if (this.fieldTypeMap[header] == 'DATETIME') {
-
-                                        if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
-                                            const date = new Date(row[header.split('.')[0]][header.split('.')[1]]);
-                                            const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                                            let hours = date.getHours();
-                                            const minutes = date.getMinutes().toString().padStart(2, '0');
-                                            const ampm = hours >= 12 ? 'PM' : 'AM';
-                                            hours = hours % 12;
-                                            hours = hours ? hours : 12;
-                                            const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-                                            const formattedDateTime = `${formattedDate} ${formattedTime}`;
-                                            td.textContent = formattedDateTime;
-                                        }
-                                        else {
-
-                                            td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                        }
-                                        td.dataset.header = header;
-                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                        td.dataset.id = row[header.split('.')[0]]['Id'];
-
-                                    }
-                                    else if (this.fieldTypeMap[header] == 'PICKLIST') {
-
-                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                        td.dataset.header = header;
-                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-
-                                        td.dataset.id = row[header.split('.')[0]]['Id'];
-
-                                    }
-                                    else if (this.fieldTypeMap[header] == 'BOOLEAN') {
-                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                        td.dataset.header = header;
-                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-
-                                        td.dataset.id = row[header.split('.')[0]]['Id'];
                                     }
                                     else {
-
-                                        if (this.isUpdatableMap[header]) {
-                                            input.value = row[header.split('.')[0]][header.split('.')[1]];
-                                            td.dataset.header = header;
-                                            td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                            td.dataset.id = row[header.split('.')[0]]['Id'];
-                                        }
-
+                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
                                     }
-
                                 }
                                 else {
                                     td.textContent = '';
                                 }
-                            }
 
+                            }
                             else if (header == 'Name' || header == 'CaseNumber') {
                                 const link = document.createElement('a');
                                 link.textContent = row[header];
@@ -861,98 +473,87 @@ export default class DynamicDataTable extends LightningElement {
 
                             }
                             else if ((!this.isUpdatableMap[header] && header !== 'Name') || (this.isUpdatableMap[header] && isId(row[header]) && header !== 'Name')) {
-
-                                if (typeof row[header] == 'object') {
-
-                                    td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
-                                    td.dataset.header = header;
-                                    td.dataset.value = Object.values(row[header]);
-                                }
-                                else {
-                                    td.textContent = row[header] == undefined ? '' : row[header];
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header];
-                                }
-
+                                td.textContent = row[header] == undefined ? '' : row[header];
                             }
                             else {
-
-                                if (this.fieldTypeMap[header] == 'BOOLEAN' && this.isUpdatableMap[header]) {
-                                    td.textContent = row[header];
-                                    td.dataset.header = header;
+                                if(this.fieldTypeMap[header]=='BOOLEAN' && this.isUpdatableMap[header]){
+                                    td.textContent = row[header] ;
+                                    td.dataset.header=header;
 
 
                                 }
-                                else if (this.fieldTypeMap[header] == 'PICKLIST') {
-                                    td.dataset.value = row[header];
-                                    td.dataset.header = header;
-                                    td.textContent = row[header];
-
+                                else if (this.fieldTypeMap[header]== 'PICKLIST') {
+                                td.dataset.value = row[header];
+                                td.dataset.header=header;
+                                td.textContent = row[header];
+                               
+                            }
+                            else if(this.fieldTypeMap[header]== 'DATE'){
+                              
+                                if(row[header] !==null){
+                                const date = new Date(row[header]);
+                                const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                td.textContent = formattedDate;
+                                console.log('row[header] date :',row[header]);
+                                console.log('formatted date :',formattedDate);
                                 }
-                                else if (this.fieldTypeMap[header] == 'DATE') {
-
-                                    if (row[header] !== null) {
-                                        const date = new Date(row[header]);
-                                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                                        td.textContent = formattedDate;
-                                    }
-                                    else {
-
-                                        td.textContent = row[header];
-                                    }
-
-
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header];
+                                else{
+                                td.textContent=row[header];
                                 }
-                                else if (this.fieldTypeMap[header] == 'DATETIME') {
-
-                                    if (row[header] !== null) {
-                                        const date = new Date(row[header]);
-                                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                                        let hours = date.getHours();
-                                        const minutes = date.getMinutes().toString().padStart(2, '0');
-                                        const ampm = hours >= 12 ? 'PM' : 'AM';
-                                        hours = hours % 12;
-                                        hours = hours ? hours : 12;
-                                        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-                                        const formattedDateTime = `${formattedDate} ${formattedTime}`;
-                                        td.textContent = formattedDateTime;
-                                    }
-                                    else {
-                                        td.textContent = row[header];
-                                    }
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header];
+                              
+                               // td.textContent = row[header] ;
+                                td.dataset.header=header;
+                                td.dataset.value = row[header];
+                            }
+                            else if(this.fieldTypeMap[header]== 'DATETIME'){
+                              
+                                if(row[header] !==null){
+                                    const date = new Date(row[header]);
+                                    console.log('date :',date);
+                                    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                                    let hours = date.getHours();
+                                    console.log('hrs :',hours);
+                                    const minutes = date.getMinutes().toString().padStart(2, '0');
+                                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                                    hours = hours % 12;
+                                    hours = hours ? hours : 12; 
+                                    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                                    const formattedDateTime = `${formattedDate} ${formattedTime}`;
+                                    td.textContent = formattedDateTime;
+                                    console.log('row[header] date :', row[header]);
+                                    console.log('formatted date and time :', formattedDateTime);
                                 }
-
-                                else if (this.fieldTypeMap[header] == 'TEXTAREA') {
-                                    if (row[header] == null) {
-                                        td.innerHTML = '';
+                                else{
+                                td.textContent=row[header];
+                                }
+                              
+                               // td.textContent = row[header] ;
+                                td.dataset.header=header;
+                                td.dataset.value = row[header];
+                            }
+                            else if(this.fieldTypeMap[header]== 'TEXTAREA' ){
+                                console.log('row[header]1 :',row[header]);
+                                if(row[header]==null){
+                                    td.innerHTML='';
+                                }
+                                else{
+                                    if(row[header].includes('<')){
+                                        td.innerHTML=row[header];
                                     }
-                                    else {
-                                        if (row[header].includes('<')) {
-                                            td.innerHTML = row[header];
-                                        }
-                                        else {
-                                            td.textContent = row[header];
-                                        }
+                                    else{
+                                        td.textContent=row[header];
+                                        
                                     }
                                 }
-                                else if (this.fieldTypeMap[header] == 'ADDRESS') {
 
+                               
+                                
 
-
-                                    td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
-                                    td.dataset.header = header;
-                                    td.dataset.value = Object.values(row[header]);
-
-                                }
-                                else {
-
-                                    input.value = row[header] == undefined ? '' : row[header];
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header];
+                            }
+                                else{
+                                input.value = row[header] == undefined ? '' : row[header];
+                                td.dataset.header=header;
+                                td.dataset.value = row[header];
                                 }
                             }
                         }
@@ -973,6 +574,7 @@ export default class DynamicDataTable extends LightningElement {
                                 else {
                                     td.textContent = '';
                                 }
+
                             }
                             else if (header == 'Name') {
                                 const link = document.createElement('a');
@@ -990,77 +592,124 @@ export default class DynamicDataTable extends LightningElement {
                         }
                     }
                     else if (this.flowRecord.length > 0) {
-
-                        if (typeof row[header] == 'object') {
-
-                            td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
-                        }
-
-
-
-                        else {
-
-                            if (typeof row[header] == 'string' && row[header].includes('<')) {
-
-                                td.innerHTML = row[header];
+                        if (this.inlineEditing) {
+                            if (!isId(row[header])) {
+                                input.value = row[header] == undefined ? '' : row[header];
                             }
-
-
-
-
-
                             else {
                                 td.textContent = row[header] == undefined ? '' : row[header];
                             }
-
                         }
-
-
+                        else {
+                            td.textContent = row[header] == undefined ? '' : row[header];
+                        }
                     }
                     else {
                         td.textContent = row[header] == undefined ? '' : row[header];
                     }
-                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA' || header.split('.')[1] == 'Name' || this.fieldTypeMap[header] == 'REFERENCE')) {//|| this.fieldTypeMap[header] == 'CURRENCY'
+                    if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header]=='BOOLEAN' || this.fieldTypeMap[header]=='PICKLIST' || this.fieldTypeMap[header]=='DATE' || this.fieldTypeMap[header]=='DATETIME' || this.fieldTypeMap[header]=='TEXTAREA') ) {
                         td.appendChild(input);
                     }
-
-
-
+                    if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
+                        td.appendChild(input);
+                    }
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
             });
-
         } catch (error) {
-
             this.tableData = false;
             this.tableDataErrorMsg = 'There is some issue while populating data in the table';
         }
+
     }
 
 
     // Handle Id column visibility toggle
     handleIdColumn(event) {
+        if (this.visibleData.length === 0) {
+            event.preventDefault();
+            event.target.checked = this.toggleIdColumn;
+            return;
+        }
+        else if (this.visibleData.length !== 0 && this.checkForFilteredList == true) {
+            event.preventDefault();
+            event.target.checked = this.toggleIdColumn;
+            return;
+        }
 
-        handleIdColumn.bind(this)(event, this);
+
+        if (this.visibleData.length > 0 && this.filteredData.length > 0) {
+            this.toggleIdColumn = !this.toggleIdColumn;
+            this.showSubmit = false;
+            this.editedIds=[];
+            this.isIdColumnVisible = !this.isIdColumnVisible;
+
+            if (this.toggleIdColumn == false) {
+                this.tableHeaders = this.tableHeaders.filter(header => !this.tableHeaderToRemove.includes(header));
+                this.tableHeaderLabel = this.tableHeaderLabel.filter(header => !this.tableHeaderLabelToRemove.includes(header));
+                this.stopColumnRender == true;
+                this.populateTableBody2(this.filteredData);
+            }
+            else {
+                this.tableHeaderLabel = this.tableHeaderLabel.concat(this.tableHeaderLabelToRemove);
+                this.tableHeaders = this.tableHeaders.concat(this.tableHeaderToRemove);
+                this.stopColumnRender == true;
+                this.populateTableBody2(this.filteredData);
+            }
+        }
+        else {
+            this.toggleIdColumn = !this.toggleIdColumn;
+            this.showSubmit = false;
+            this.editedIds=[];
+            this.isIdColumnVisible = !this.isIdColumnVisible;
+            if (this.toggleIdColumn == false) {
+                this.tableHeaders = this.tableHeaders.filter(header => !this.tableHeaderToRemove.includes(header));
+                this.tableHeaderLabel = this.tableHeaderLabel.filter(header => !this.tableHeaderLabelToRemove.includes(header));
+                this.stopColumnRender == true;
+                this.populateTableBody2(this.visibleData);
+            }
+            else {
+                this.tableHeaderLabel = this.tableHeaderLabel.concat(this.tableHeaderLabelToRemove);
+                this.tableHeaders = this.tableHeaders.concat(this.tableHeaderToRemove);
+                this.stopColumnRender == true;
+                this.populateTableBody2(this.visibleData);
+            }
+        }
     }
-
 
     // To check whether scroll bar is in bottom.
     isScrolledToBottom(scrollableElement) {
-        return Math.round(scrollableElement.scrollHeight - scrollableElement.scrollTop) === scrollableElement.clientHeight || Math.round(scrollableElement.scrollHeight - scrollableElement.scrollTop) === scrollableElement.clientHeight + 1;
+        return scrollableElement.scrollHeight - scrollableElement.scrollTop === scrollableElement.clientHeight || scrollableElement.scrollHeight - scrollableElement.scrollTop === scrollableElement.clientHeight + 1;
     }
 
     // Handle scrolling in the data table for infinite loading
     handleScroll(event) {
-        handleScroll.bind(this)(event, this.isScrolledToBottom, this.enableInfiniteLoading, this.template, this.scrolled,
-            this);
-    }
+        if (event.target.scrollTop !== 0) {
+            if (this.isScrolledToBottom(event.target) && !this.scrolled) {
 
+                this.scrolled = true;
+                if (this.enableInfiniteLoading) {
+                    this.showSubmit = false;
+                    this.editedIds=[];
+                    const allArrowIcons = this.template.querySelectorAll('lightning-icon');
+                    allArrowIcons.forEach(icon => {
+                        icon.classList.remove('arrowIconShow');
+                    });
+                    const inputElement = this.template.querySelector('[data-id="searchInput"]');
+                    inputElement.value = '';
+                    this.showInput = false;
+                    this.loadMoreData();
+                }
+
+            }
+        }
+
+
+    }
 
     // Load more data when scrolled to the bottom
     loadMoreData() {
-
         this.isLoaded = true;
         this.rowOffset = this.rowSize + this.rowOffset;
         this.stopColumnRender = true;
@@ -1069,17 +718,147 @@ export default class DynamicDataTable extends LightningElement {
 
     // Handle sorting of data by column
     handleSort(event) {
-        handleSort.bind(this)(event, this.dataToSort, this.showSubmit, this.editedIds, this.selectedHeaderId, this.activeHeader, this.sortedBy, this.sortedDirection, this.soql, this.relatedLabelMap, this.template, this);
+        if (this.dataToSort.length > 0) {
+            this.showSubmit = false;
+            this.editedIds=[];
+            this.selectedHeaderId = event.currentTarget.dataset.id;
+            this.activeHeader = this.selectedHeaderId;
+            this.sortedBy = event.currentTarget.dataset.id;
+            this.sortedDirection = event.currentTarget.dataset.set;
+
+            if (this.soql) {
+                const sortedArray = this.sortData(this.relatedLabelMap[this.sortedBy], this.sortedDirection, this.selectedHeaderId);
+                this.populateTableBody2(sortedArray);
+            }
+            else {
+                const sortedArray = this.sortData(this.sortedBy, this.sortedDirection, this.selectedHeaderId);
+                this.populateTableBody2(sortedArray);
+            }
+        }
     }
 
+    // Sorts data based on the given field and direction
+    sortData(field, direction, selectedField) {
+        const allArrowIcons = this.template.querySelectorAll('lightning-icon');
+        allArrowIcons.forEach(icon => {
+            icon.classList.remove('arrowIconShow');
+        });
+
+        if (direction == 'desc') {
+            const tableHeader = this.template.querySelector(`th[data-id="${selectedField}"]`);
+            const arrowIcon = tableHeader.querySelector('lightning-icon');
+            arrowIcon.iconName = 'utility:arrowup';
+            arrowIcon.classList.add('arrowIconShow');
+            tableHeader.setAttribute('data-set', 'asc')
+            const a = [...this.dataToSort]
+            a.sort((a, b) => {
+                if (field.includes('.')) {
+                    if (typeof a[field.split('.')[0]][field.split('.')[1]] == 'string' && typeof b[field.split('.')[0]][field.split('.')[1]] == 'string') {
+                        return a[field.split('.')[0]][field.split('.')[1]].toLowerCase() > b[field.split('.')[0]][field.split('.')[1]].toLowerCase() ? 1 : -1;
+                    }
+                    else if (a[field.split('.')[0]][field.split('.')[1]] == null && b[field.split('.')[0]][field.split('.')[1]] == null) {
+                        return -1;
+                    }
+                    else if (b[field.split('.')[0]][field.split('.')[1]] == null && typeof a[field.split('.')[0]][field.split('.')[1]] == 'string') {
+                        return 1;
+                    }
+                    else if (a[field.split('.')[0]][field.split('.')[1]] == null && typeof b[field.split('.')[0]][field.split('.')[1]] == 'string') {
+                        return -1;
+                    }
+                    else {
+                        return a[field.split('.')[0]][field.split('.')[1]] > b[field.split('.')[0]][field.split('.')[1]] ? 1 : -1;
+                    }
+                }
+                else {
+                    if (typeof a[field] == 'string' && typeof b[field] == 'string') {
+                        return a[field].toLowerCase() > b[field].toLowerCase() ? 1 : -1;
+                    }
+                    else if (a[field] == null && b[field] == null) {
+                        return -1;
+                    }
+                    else if (a[field] == null && typeof b[field] == 'string') {
+                        return 1;
+                    }
+                    else if (b[field] == null && typeof a[field] == 'string') {
+                        return -1;
+                    }
+                    else {
+                        return a[field] > b[field] ? 1 : -1;
+                    }
+                }
+            }
+            );
+            return a;
+        }
+        else {
+            const tableHeader = this.template.querySelector(`th[data-id="${selectedField}"]`);
+            const arrowIcon = tableHeader.querySelector('lightning-icon');
+            arrowIcon.iconName = 'utility:arrowdown';
+            arrowIcon.classList.add('arrowIconShow');
+            tableHeader.setAttribute('data-set', 'desc');
+            const a = [...this.dataToSort]
+            a.sort((a, b) => {
+                if (field.includes('.')) {
+                    if (typeof a[field.split('.')[0]][field.split('.')[1]] == 'string' && typeof b[field.split('.')[0]][field.split('.')[1]] == 'string') {
+                        return a[field.split('.')[0]][field.split('.')[1]].toLowerCase() < b[field.split('.')[0]][field.split('.')[1]].toLowerCase() ? 1 : -1;
+                    }
+                    else if (a[field.split('.')[0]][field.split('.')[1]] == null && b[field.split('.')[0]][field.split('.')[1]] == null) {
+                        return -1;
+                    }
+                    else if (b[field.split('.')[0]][field.split('.')[1]] == null && typeof a[field.split('.')[0]][field.split('.')[1]] == 'string') {
+                        return -1;
+                    }
+                    else if (a[field.split('.')[0]][field.split('.')[1]] == null && typeof b[field.split('.')[0]][field.split('.')[1]] == 'string') {
+                        return 1;
+                    }
+                    else {
+                        return a[field.split('.')[0]][field.split('.')[1]] < b[field.split('.')[0]][field.split('.')[1]] ? 1 : -1;
+                    }
+                }
+                else {
+                    if (typeof a[field] == 'string' && typeof b[field] == 'string') {
+                        return a[field].toLowerCase() < b[field].toLowerCase() ? 1 : -1
+                    }
+                    else if (a[field] == null && b[field] == null) {
+                        return -1;
+                    }
+                    else if (a[field] == null && typeof b[field] == 'string') {
+                        return -1;
+                    }
+                    else if (b[field] == null && typeof a[field] == 'string') {
+                        return 1;
+                    }
+                    else {
+                        return a[field] < b[field] ? 1 : -1
+                    }
+                }
+            });
+            return a;
+        }
+    }
     // Handle the start of a drag event for column header
     handleDragStart(event) {
-        handleDragStart.bind(this)(event, this.showSubmit, this.editedIds, this.template, this);
+        this.showSubmit = false;
+        this.editedIds=[];
+        event.dataTransfer.setData('text', event.target.dataset.index);
+        const inputField = this.template.querySelector('lightning-input');
+        inputField.value = '';
     }
-
-    // Handle the drop event for column header
+    // Handle the drop position for column header
     handleDrop(event) {
-        handleDrop.bind(this)(event, this.tableHeaders, this.tableHeaderLabel, this);
+        const fromIndex = event.dataTransfer.getData('text');
+        const toIndex = event.currentTarget.dataset.index;
+
+        if (fromIndex !== toIndex) {
+            this.tableHeaders.splice(toIndex, 0, this.tableHeaders.splice(fromIndex, 1)[0]);
+            this.tableHeaders = [...this.tableHeaders];
+
+            if (this.tableHeaderLabel.length > 0) {
+                this.tableHeaderLabel.splice(toIndex, 0, this.tableHeaderLabel.splice(fromIndex, 1)[0]);
+                this.tableHeaderLabel = [...this.tableHeaderLabel];
+            }
+            this.populateTableBody();
+        }
     }
 
     handleDragOver(event) {
@@ -1097,11 +876,63 @@ export default class DynamicDataTable extends LightningElement {
 
     // Handle global search
     handleKeyUp(event) {
-        handleKeyUp.bind(this)(event, this.template, this.showInput, this.showSubmit, this.editedIds, this.visibleData, this.globalSearchCloseFilterData, this.dataToSort, this.tableDataPn, this.tableHeaders, this.stopColumnRender,
-            this.checkForFilteredList, this.filteredData, this.totalRecords, this);
+        const allArrowIcons = this.template.querySelectorAll('lightning-icon');
+        allArrowIcons.forEach(icon => {
+            icon.classList.remove('arrowIconShow');
+        });
+        this.showInput = false;
+        this.showSubmit = false;
+        this.editedIds=[];
+        var inputText = event.target.value;
+        this.visibleData = this.searchTable(inputText);
+        this.globalSearchCloseFilterData = this.searchTable(inputText);
+        this.dataToSort = this.visibleData;
 
+
+        if (this.visibleData == '') {
+            this.stopColumnRender = true;
+            this.checkForFilteredList = false;
+            this.filteredData = [];
+            const tbody = this.template.querySelector('tbody');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No data available</td></tr>';
+            this.totalRecords = 0;
+        }
+        else {
+            var text = this.template.querySelector('h3');
+            text.textContent = '';
+            this.stopColumnRender = true;
+            this.filteredData = [];
+            this.checkForFilteredList = false;
+            this.populateTableBody2(this.visibleData);
+        }
     }
 
+
+    // Search through table data and return filtered results based on the search input
+    searchTable(data) {
+        data = data.toLowerCase();
+        var filteredData = [];
+        this.tableDataPn.some((item) => {
+            let matchFound = false;
+            this.tableHeaders.some((head) => {
+
+                if (!head.includes('.') && String(item[head]).toLowerCase().includes(data)) {
+                    filteredData.push(item);
+                    matchFound = true;
+                    return matchFound;
+                }
+                else if (item[head.split('.')[0]] !== undefined) {
+                    if (head.includes('.') && String(item[head.split('.')[0]][head.split('.')[1]]).toLowerCase().includes(data)) {
+                        filteredData.push(item);
+                        matchFound = true;
+                        return matchFound;
+                    }
+                }
+            })
+
+        })
+        return filteredData;
+    }
 
     // Function to populate the table body with given data
     populateTableBody2(data) {
@@ -1133,6 +964,8 @@ export default class DynamicDataTable extends LightningElement {
                 this.isMainCheckboxChecked = true;
             }
 
+
+
             const tr = document.createElement('tr');
             tr.addEventListener('dblclick', (event) => this.handleDoubleClick(event));
 
@@ -1145,6 +978,8 @@ export default class DynamicDataTable extends LightningElement {
 
             tr.appendChild(hiddenIdCell);
 
+
+
             if (this.checkBoxVisibile) {
                 const checkboxCell = document.createElement('td');
                 const checkboxInput = document.createElement('input');
@@ -1155,6 +990,7 @@ export default class DynamicDataTable extends LightningElement {
                 if (this.selectedRows.some(selectedRow => forAnyId(selectedRow) === forAnyId(row))) {
                     checkboxInput.checked = true;
                 }
+
 
                 checkboxCell.appendChild(checkboxInput);
                 tr.appendChild(checkboxCell);
@@ -1168,7 +1004,6 @@ export default class DynamicDataTable extends LightningElement {
                 input.setAttribute('readonly', true);
                 input.style.border = 'none';
                 input.style.width = 'auto';
-                input.style.outline = 'none';
                 const td = document.createElement('td');
                 td.dataset.type = this.fieldTypeMap[header];
 
@@ -1181,89 +1016,18 @@ export default class DynamicDataTable extends LightningElement {
                                     link.href = '/' + row[header.split('.')[0]]['Id'];
                                     link.target = '_blank';
                                     link.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.lookup = 'LOOKUPNAME';
-                                    td.dataset.header = header;
-                                    td.dataset.linkid = '/' + row[header.split('.')[0]]['Id'];
-                                    td.dataset.id = row[header.split('.')[0]]['Id'];
                                     td.appendChild(link);
                                 }
-                                else if (!this.isUpdatableMap[header]) {
-                                    if (typeof row[header.split('.')[0]][header.split('.')[1]] == 'object') {
-                                        // //console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
-                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '').join(',');
-                                        td.dataset.header = header;
-                                        td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
-                                    }
-                                    else {
-                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                        td.dataset.header = header;
-                                        td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                    }
-
-                                }
-                                else if (this.fieldTypeMap[header] == 'DATE') {
-
-                                    if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
-                                        const date = new Date(row[header.split('.')[0]][header.split('.')[1]]);
-                                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                                        td.textContent = formattedDate;
-                                    }
-                                    else {
-                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                    }
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.id = row[header.split('.')[0]]['Id'];
-                                }
-                                else if (this.fieldTypeMap[header] == 'DATETIME') {
-                                    if (row[header.split('.')[0]][header.split('.')[1]] !== '') {
-                                        const date = new Date(row[header.split('.')[0]][header.split('.')[1]]);
-                                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                                        let hours = date.getHours();
-                                        const minutes = date.getMinutes().toString().padStart(2, '0');
-                                        const ampm = hours >= 12 ? 'PM' : 'AM';
-                                        hours = hours % 12;
-                                        hours = hours ? hours : 12;
-                                        const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-                                        const formattedDateTime = `${formattedDate} ${formattedTime}`;
-                                        td.textContent = formattedDateTime;
-                                    }
-                                    else {
-                                        td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                    }
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.id = row[header.split('.')[0]]['Id'];
-                                }
-                                else if (this.fieldTypeMap[header] == 'PICKLIST') {
-                                    td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.id = row[header.split('.')[0]]['Id'];
-                                }
-                                else if (this.fieldTypeMap[header] == 'BOOLEAN') {
-                                    td.textContent = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.id = row[header.split('.')[0]]['Id'];
-                                }
-                                else if (this.fieldTypeMap[header] == 'ADDRESS') {
-                                    td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '').join(',');
-                                    td.dataset.header = header;
-                                    td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
-                                }
                                 else {
-                                    input.value = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.header = header;
-                                    td.dataset.value = row[header.split('.')[0]][header.split('.')[1]];
-                                    td.dataset.id = row[header.split('.')[0]]['Id'];
+                                    td.textContent = row[header.split('.')[0]][header.split('.')[1]];
                                 }
                             }
                             else {
                                 td.textContent = '';
                             }
+
                         }
-                        else if (header == 'Name' || header == 'CaseNumber') {
+                        else if (header == 'Name') {
                             const link = document.createElement('a');
                             link.textContent = row[header];
                             link.href = '/' + row.Id;
@@ -1271,85 +1035,89 @@ export default class DynamicDataTable extends LightningElement {
                             td.appendChild(link);
                         }
                         else if ((!this.isUpdatableMap[header] && header !== 'Name') || (this.isUpdatableMap[header] && isId(row[header]) && header !== 'Name')) {
-                            if (typeof row[header] == 'object') {
-
-                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
-                                td.dataset.header = header;
-                                td.dataset.value = Object.values(row[header]);
-                            }
-                            else {
-                                td.textContent = row[header] == undefined ? '' : row[header];
-                                td.dataset.header = header;
-                                td.dataset.value = row[header];
-                            }
-
+                            td.textContent = row[header] == undefined ? '' : row[header];
                         }
+                        else{
+                            if(this.fieldTypeMap[header]=='BOOLEAN' && this.isUpdatableMap[header]){
+                                td.textContent = row[header] ;
+                                td.dataset.header=header;
+
+
+                            }
+                        else if (this.fieldTypeMap[header]== 'PICKLIST') {
+                        td.dataset.value = row[header];
+                        td.dataset.header=header;
+                        td.textContent = row[header];
+                    }
+
+                    else if(this.fieldTypeMap[header]== 'DATE'){
+                              
+                        if(row[header] !==null){
+                        const date = new Date(row[header]);
+                        const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                        td.textContent = formattedDate;
+                        console.log('row[header] date :',row[header]);
+                        console.log('formatted date :',formattedDate);
+                        }
+                        else{
+                        td.textContent=row[header];
+                        }
+                      
+                       // td.textContent = row[header] ;
+                        td.dataset.header=header;
+                        td.dataset.value = row[header];
+                    }
+                    else if(this.fieldTypeMap[header]== 'DATETIME'){
+                      
+                        if(row[header] !==null){
+                            const date = new Date(row[header]);
+                            console.log('date :',date);
+                            const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+                            let hours = date.getHours();
+                            console.log('hrs :',hours);
+                            const minutes = date.getMinutes().toString().padStart(2, '0');
+                            const ampm = hours >= 12 ? 'PM' : 'AM';
+                            hours = hours % 12;
+                            hours = hours ? hours : 12; 
+                            const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                            const formattedDateTime = `${formattedDate} ${formattedTime}`;
+                            td.textContent = formattedDateTime;
+                            console.log('row[header] date :', row[header]);
+                            console.log('formatted date and time :', formattedDateTime);
+                        }
+                        else{
+                        td.textContent=row[header];
+                        }
+                      
+                       // td.textContent = row[header] ;
+                        td.dataset.header=header;
+                        td.dataset.value = row[header];
+                    }
+                    else if(this.fieldTypeMap[header]== 'TEXTAREA' ){
+                        console.log('row[header]1 :',row[header]);
+                        if(row[header]==null){
+                            td.innerHTML='';
+                        }
+                        else{
+                            if(row[header].includes('<')){
+                                td.innerHTML=row[header];
+                            }
+                            else{
+                                td.textContent=row[header];
+                                
+                            }
+                        }
+
+                       
+                        
+
+                    }
+
+                    
                         else {
-                            if (this.fieldTypeMap[header] == 'BOOLEAN' && this.isUpdatableMap[header]) {
-                                td.textContent = row[header];
-                                td.dataset.header = header;
-                            }
-                            else if (this.fieldTypeMap[header] == 'PICKLIST') {
-                                td.dataset.value = row[header];
-                                td.dataset.header = header;
-                                td.textContent = row[header];
-                            }
-
-                            else if (this.fieldTypeMap[header] == 'DATE') {
-                                if (row[header] !== null) {
-                                    const date = new Date(row[header]);
-                                    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                                    td.textContent = formattedDate;
-                                }
-                                else {
-                                    td.textContent = row[header];
-                                }
-                                td.dataset.header = header;
-                                td.dataset.value = row[header];
-                            }
-                            else if (this.fieldTypeMap[header] == 'DATETIME') {
-
-                                if (row[header] !== null) {
-                                    const date = new Date(row[header]);
-                                    const formattedDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
-                                    let hours = date.getHours();
-                                    const minutes = date.getMinutes().toString().padStart(2, '0');
-                                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                                    hours = hours % 12;
-                                    hours = hours ? hours : 12;
-                                    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-                                    const formattedDateTime = `${formattedDate} ${formattedTime}`;
-                                    td.textContent = formattedDateTime;
-                                }
-                                else {
-                                    td.textContent = row[header];
-                                }
-                                td.dataset.header = header;
-                                td.dataset.value = row[header];
-                            }
-                            else if (this.fieldTypeMap[header] == 'TEXTAREA') {
-                                if (row[header] == null) {
-                                    td.innerHTML = '';
-                                }
-                                else {
-                                    if (row[header].includes('<')) {
-                                        td.innerHTML = row[header];
-                                    }
-                                    else {
-                                        td.textContent = row[header];
-                                    }
-                                }
-                            }
-                            else if (this.fieldTypeMap[header] == 'ADDRESS') {
-                                td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
-                                td.dataset.header = header;
-                                td.dataset.value = Object.values(row[header]);
-                            }
-
-                            else {
-                                input.value = row[header] == undefined ? '' : row[header];
-                            }
+                            input.value = row[header] == undefined ? '' : row[header];
                         }
+                    }
                     }
                     else {
                         if (header.includes('.')) {
@@ -1385,43 +1153,37 @@ export default class DynamicDataTable extends LightningElement {
                     }
                 }
                 else if (this.flowRecord.length > 0) {
-
-                    if (typeof row[header] == 'object') {
-
-                        td.textContent = row[header] == undefined ? '' : Object.values(row[header]).filter(items => items !== null && items !== '').join(',');
-                    }
-
-                    else {
-
-                        if (typeof row[header] == 'string' && row[header].includes('<')) {
-
-                            td.innerHTML = row[header];
+                    if (this.inlineEditing) {
+                        if (!isId(row[header])) {
+                            input.value = row[header] == undefined ? '' : row[header];
                         }
-
-
-
-
-
                         else {
                             td.textContent = row[header] == undefined ? '' : row[header];
                         }
-
                     }
-
+                    else {
+                        td.textContent = row[header] == undefined ? '' : row[header];
+                    }
                 }
                 else {
                     td.textContent = row[header] == undefined ? '' : row[header];
                 }
 
-                if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header] == 'BOOLEAN' || this.fieldTypeMap[header] == 'PICKLIST' || this.fieldTypeMap[header] == 'DATE' || this.fieldTypeMap[header] == 'DATETIME' || this.fieldTypeMap[header] == 'TEXTAREA' || header.split('.')[1] == 'Name')) {
+
+                if (this.isUpdatableMap[header] && (!isId(row[header])) && this.inlineEditing && header !== 'Name' && !(this.fieldTypeMap[header]=='BOOLEAN' || this.fieldTypeMap[header]=='PICKLIST' || this.fieldTypeMap[header]=='DATE' || this.fieldTypeMap[header]=='DATETIME' ||  this.fieldTypeMap[header]=='TEXTAREA')) {
                     td.appendChild(input);
                 }
-
+                if (!this.soql && this.flowRecord.length > 0 && !isId(row[header]) && this.inlineEditing) {
+                    td.appendChild(input);
+                }
                 tr.appendChild(td);
             });
+
             tbody.appendChild(tr);
         });
     }
+
+
 
     // Stopping the table to sort when searching in column filter.
     handleNotSort(event) {
@@ -1430,33 +1192,136 @@ export default class DynamicDataTable extends LightningElement {
 
     //Handle Column filter search.
     handleInputChange(event) {
-        handleInputChange.bind(this)(event, this.soql, this.relatedLabelMap, this.columnFilters, this.visibleData,
-            this.dataToSort, this.stopColumnRender, this.checkForFilteredList, this, this.template, this.totalRecords, this.showSubmit,
-            this.editedIds);
+        const inputValue = event.target.value.toLowerCase();
+        let currentHeader = event.currentTarget.dataset.id;
 
+        if (this.soql) {
+            currentHeader = this.relatedLabelMap[currentHeader];
+        }
+        this.columnFilters[currentHeader] = inputValue;
+        this.filteredData = [...this.visibleData];
+        for (const header in this.columnFilters) {
+            const filterValue = this.columnFilters[header];
+            if (header.includes('.')) {
+                this.filteredData = this.filteredData.filter(item => {
+                    if (item[header.split('.')[0]] !== undefined && item[header.split('.')[0]][header.split('.')[1]] !== undefined) {
+                        return String(item[header.split('.')[0]][header.split('.')[1]]).toLowerCase().includes(filterValue)
+                    }
+                    else if (filterValue == '') {
+                        return this.visibleData;
+                    }
+                });
+            }
+            else {
+                this.filteredData = this.filteredData.filter(item =>
+                    String(item[header]).toLowerCase().includes(filterValue)
+                );
+            }
+        }
+        this.dataToSort = this.filteredData;
+        let isEmpty = Object.values(this.columnFilters).every(value => value === '');
+        if (isEmpty) {
+            this.stopColumnRender = true;
+            this.checkForFilteredList = false;
+            this.populateTableBody2(this.filteredData);
+        }
+        else {
+            if (this.filteredData.length === 0) {
+                this.stopColumnRender = true;
+                const tbody = this.template.querySelector('tbody');
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No data available</td></tr>';
+                this.totalRecords = 0;
+                this.checkForFilteredList = true;
+            } else {
+                this.stopColumnRender = true;
+                this.checkForFilteredList = false;
+                this.populateTableBody2(this.filteredData);
+            }
+        }
     }
 
     //Reset the table to its original state, clearing filters and selections
     handleReset() {
+        const inputElement = this.template.querySelector('[data-id="searchInput"]');
+        inputElement.value = '';
+        const checkboxes = this.template.querySelectorAll('input[type="checkbox"]');
 
-        handleReset.bind(this)(this.template, this.selectedRows, this.showInput, this.showSubmit, this.editedIds
-            , this.filteredData, this);
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        this.selectedRows = [];
+
+        const allArrowIcons = this.template.querySelectorAll('lightning-icon');
+        allArrowIcons.forEach(icon => {
+            icon.classList.remove('arrowIconShow');
+
+        });
+        this.showInput = false;
+        this.showSubmit = false;
+        this.editedIds=[];
+        this.filteredData = [];
+        this.populateTableBody();
     }
 
-    // Handle single checkbox selection for selecting all rows
+    // Handle main checkbox selection for selecting all rows
     handleCheckboxChange(event) {
-        handleCheckboxChange.bind(this)(event, this.tableDataPn, this.selectedRows, this.visibleData, this, this.isMainCheckboxChecked,
-            this.output
-        );
+        const rowId = event.currentTarget.dataset.id
+        const isChecked = event.target.checked;
+        let rowData;
+
+        for (let i = 0; i < this.tableDataPn.length; i++) {
+            if (this.tableDataPn[i].Id == rowId || this.tableDataPn[i].id == rowId || this.tableDataPn[i].ID == rowId) {
+                rowData = this.tableDataPn[i];
+                break;
+            }
+        }
+
+        if (isChecked) {
+            this.selectedRows.push(rowData);
+            if (this.selectedRows.length === this.visibleData.length) {
+                this.isMainCheckboxChecked = true;
+            }
+        }
+        else {
+            this.isMainCheckboxChecked = false;
+            const index = this.selectedRows.findIndex(item => item === rowData);
+            if (index !== -1) {
+                this.selectedRows.splice(index, 1);
+            }
+        }
+
+        this.output = JSON.stringify(this.selectedRows);
+
     }
 
-    // Handle main checkbox selection for selecting the rows  
+    // Handle single checkbox selection for selecting the rows
     checkAllCheckboxes(event) {
-        checkAllCheckboxes.bind(this)(event, this, this.isMainCheckboxChecked, this.template, this.tableDataPn, this.selectedRows,
-            this.output
-        );
+        const clicked = event.target.checked;
+        this.isMainCheckboxChecked = clicked;
+        const checkboxes = this.template.querySelectorAll('tbody input[type="checkbox"]');
+
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = clicked;
+            const rowId = checkbox.dataset.id;
+
+            if (clicked) {
+                const rowData = this.tableDataPn.find(row => row.Id == rowId || row.id == rowId || row.ID == rowId);
+                if (rowData && !this.selectedRows.includes(rowData)) {
+                    this.selectedRows.push(rowData);
+                }
+
+            } else {
+                const index = this.selectedRows.findIndex(row => row.Id == rowId || row.id == rowId || row.ID == rowId);
+                if (index !== -1) {
+                    this.selectedRows.splice(index, 1);
+                }
+            }
+        });
+        this.output = JSON.stringify(this.selectedRows);
     }
 
+
+    // Getting header name of column.
     handleHeaderName(event) {
         this.stopColumnRender = true;
         this.showHeaderName = event.currentTarget.textContent;
@@ -1484,1144 +1349,1006 @@ export default class DynamicDataTable extends LightningElement {
         }
     }
 
-    // Handle to submit the records
-    handleGoNext() {
-        this.submitData();
+
+
+
+       
+handleGoNext(){
+
+    this.submitData();
+  
+ }
+ 
+ 
+
+
+
+async handleDoubleClick(event) {
+    
+
+     const target = event.target;
+     console.log('target :',target);
+   
+ 
+
+     
+     if (target.tagName === 'TD' && target.dataset.type === 'BOOLEAN' && this.isUpdatableMap[target.dataset.header]) {
+        console.log('boolean ');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = target.textContent.trim().toLowerCase() === 'true';
+        const currentValue= target.textContent.trim().toLowerCase() === 'true';
+        console.log('text :',target.textContent);
+        checkbox.addEventListener('change', (event) => {
+
+            console.log('value :',event.target.checked);
+            target.dataset.value=event.target.checked;
+            console.log('val is :', target.dataset.value);
+            target.dataset.edited="true";
+            
+            console.log('current value :',currentValue);
+           if(event.target.checked==currentValue){
+            target.textContent=currentValue;
+            target.dataset.edited="false";
+           }
+
+            const tr = target.closest('tr');
+            let isAnyFieldEdited = false;
+            tr.querySelectorAll('td').forEach(td => {
+
+                console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
+                if (td.dataset.edited === "true") {
+                    isAnyFieldEdited = true;
+                }
+            });
+            const hiddenIdCell = tr.querySelector('td:first-child');
+            const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+        
+            if (hiddenId) {
+                console.log('hiddenId  :', hiddenId.value);
+                  console.log('this.editedIds  :', this.editedIds);
+                  if (!this.editedIds.includes(hiddenId.value)) {
+                      this.editedIds.push(hiddenId.value);
+                            console.log('edited id inside1:', this.editedIds);
+                      this.showSubmit = true;
+                       this.stopColumnRender = true;
+                  }
+                  else if(event.target.checked===currentValue && !isAnyFieldEdited){
+                      console.log('this.editedIds 1 :', this.editedIds);
+                      let index=this.editedIds.indexOf(hiddenId.value);
+                      if(index !== -1){
+                          this.editedIds.splice(index,1);
+                      }
+                      console.log('this.editedIds  2:', this.editedIds);
+                      if(this.editedIds.length==0){
+                          this.showSubmit=false;
+                      }
+                  }
+              }
+
+        });
+
+        document.addEventListener('click', function handleOutsideClick(event) {
+            console.log('event Listner :', checkbox.checked+'  value current :',currentValue);
+           
+            if (!checkbox.contains(event.target) && !target.contains(event.target) ) {
+                console.log('clicked outside');
+
+                if(checkbox.checked==currentValue){
+                    target.textContent=currentValue;
+                }
+               
+
+                document.removeEventListener('click', handleOutsideClick);
+            }
+        });
+        target.innerHTML = '';
+        target.appendChild(checkbox);
+     
     }
-
-    // Function to make cell editable according to their type
-    async handleDoubleClick(event) {
-        const target = event.target;
-
-        if (target.tagName === 'TD' && target.dataset.type === 'BOOLEAN' && this.isUpdatableMap[target.dataset.header] && this.inlineEditing && target.dataset.id !== '') {
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = target.textContent.trim().toLowerCase() === 'true';
-            const currentValue = target.textContent.trim().toLowerCase() === 'true';
-            checkbox.addEventListener('change', (event) => {
-                target.dataset.value = event.target.checked;
-                target.dataset.edited = "true";
-                if (event.target.checked == currentValue) {
-                    target.textContent = currentValue;
-                    target.dataset.edited = "false";
-                }
-
-                const tr = target.closest('tr');
-                let isAnyFieldEdited = false;
-                tr.querySelectorAll('td').forEach(td => {
-                    if (td.dataset.edited === "true") {
-                        isAnyFieldEdited = true;
-                    }
-                });
-                const hiddenIdCell = tr.querySelector('td:first-child');
-                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
-
-                if (hiddenId) {
-                    if (!this.editedIds.includes(hiddenId.value)) {
-                        this.editedIds.push(hiddenId.value);
-                        this.showSubmit = true;
-                        this.stopColumnRender = true;
-                    }
-                    else if (event.target.checked === currentValue && !isAnyFieldEdited) {
-                        let index = this.editedIds.indexOf(hiddenId.value);
-                        if (index !== -1) {
-                            this.editedIds.splice(index, 1);
-                        }
-                        if (this.editedIds.length == 0) {
-                            this.showSubmit = false;
-                        }
-                    }
-                }
-
-            });
-
-            document.addEventListener('click', function handleOutsideClick(event) {
-
-                if (!checkbox.contains(event.target) && !target.contains(event.target)) {
-                    if (checkbox.checked == currentValue) {
-                        target.textContent = currentValue;
-                    }
-                    document.removeEventListener('click', handleOutsideClick);
-                }
-            });
-            target.innerHTML = '';
-            target.appendChild(checkbox);
-
-        }
-        else if (target.tagName === 'TD' && target.dataset.type === 'PICKLIST' && this.inlineEditing && target.dataset.id !== '') {
+    else if (target.tagName === 'TD' && target.dataset.type === 'PICKLIST') {
+   
+       console.log('picklist');
+       console.log('edited :',target.dataset.inputEdited);
             let currentValue = target.dataset.value;
-            const headerValue = target.dataset.header;
-            let pickListOptions
-            if (headerValue.includes('.')) {
-                let head = headerValue.split('.');
+            const headerValue=target.dataset.header;
+            console.log('current value :'+currentValue);
+            console.log('header :',headerValue);
+            console.log('query :', this.soql);
+            let pickListOptions= await getPicklistValue({query:this.soql,field:headerValue});
+            console.log('picklist value',pickListOptions);
+              const select = document.createElement('select');
+              let originalOptions = pickListOptions; 
+  
+           let options=[...originalOptions];
+           console.log('required val :',this.requiredFieldMap[headerValue]);
+         
+           if(currentValue=='null'){
+            currentValue='--None--';
+           }
 
-                pickListOptions = await getRelatedPicklistValue({ objectName: head[0], field: head[1] });
-
-            }
-            else {
-                pickListOptions = await getPicklistValue({ query: this.soql, field: headerValue });
-            }
-
-            const select = document.createElement('select');
-            let originalOptions = pickListOptions;
-
-            let options = [...originalOptions];
-            if (currentValue == 'null' || currentValue == '') {
-                currentValue = '--None--';
-            }
-
-            if (!options.includes('--None--')) {
-                options.unshift('--None--');
-            }
+              if (!options.includes('--None--')) {
+        options.unshift('--None--');
+    }
 
 
             options.forEach(option => {
                 const optionElement = document.createElement('option');
+               
                 optionElement.value = option;
                 optionElement.textContent = option;
-                if (option === currentValue) {
+           
+               
+                console.log('option :'+option+'  current value :'+currentValue);
+                if (option === currentValue ) {
+                console.log('selected true');
                     optionElement.selected = true;
                 }
+
                 select.appendChild(optionElement);
             });
 
             select.addEventListener('change', (event) => {
                 target.dataset.value = event.target.value;
-                const selectedValue = event.target.value;
-                target.dataset.edited = "true";
-
-                if (selectedValue === '--None--' && currentValue === '--None--') {
-                    target.textContent = '';
-                    target.dataset.edited = "false";
-                }
-                else if (event.target.value == currentValue && currentValue != '--None--') {
+               const selectedValue = event.target.value;
+               target.dataset.edited="true";
+         
+                if (selectedValue === '--None--' && currentValue==='--None--') {
+                  
+                    target.textContent = ''; 
+                    target.dataset.edited="false";
+                } 
+              else if(event.target.value==currentValue && currentValue!='--None--'){
                     target.textContent = event.target.value;
-                    target.dataset.edited = "false";
-                    target.style.border = '';
-
+                    target.dataset.edited="false";
+                    target.style.border='';
+              
                 }
-
-                this.pickListChange = target.dataset.edited;
+             
+               console.log('target value :'+target.dataset.value );
+               console.log('target value2 :'+currentValue);
+               
+               this.pickListChange= target.dataset.edited;
+               console.log('picklist change',this.pickListChange);
+               
                 const tr = target.closest('tr');
                 const hiddenIdCell = tr.querySelector('td:first-child');
                 const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
                 let isAnyFieldEdited = false;
                 tr.querySelectorAll('td').forEach(td => {
+
+                    console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
                     if (td.dataset.edited === "true") {
                         isAnyFieldEdited = true;
                     }
                 });
 
                 if (hiddenId) {
+                    console.log('hiddenId  :', hiddenId.value);
+                    console.log('this.editedIds  :', this.editedIds);
                     try {
                         if (!this.editedIds.includes(hiddenId.value)) {
                             this.editedIds.push(hiddenId.value);
+                            console.log('edited id inside1:', this.editedIds);
+                      
                             this.showSubmit = true;
                             this.stopColumnRender = true;
+                      
                         }
-                        else if (event.target.value == currentValue && !isAnyFieldEdited) {
-                            let index = this.editedIds.indexOf(hiddenId.value);
-                            if (index !== -1) {
-                                this.editedIds.splice(index, 1);
+                        else if(event.target.value==currentValue &&  !isAnyFieldEdited){    //&& !tr.dataset.inputEdited
+                            console.log('this.editedIds 1 :', this.editedIds);
+                            let index=this.editedIds.indexOf(hiddenId.value);
+                            if(index !== -1){
+                                this.editedIds.splice(index,1);
                             }
-                            if (this.editedIds.length == 0) {
-                                this.showSubmit = false;
+                            console.log('this.editedIds  2:', this.editedIds);
+                            if(this.editedIds.length==0){
+                                this.showSubmit=false;
                             }
                         }
                     } catch (error) {
+                        console.log('err message ::', error.message);
                     }
                 }
+              
             });
 
+          
             const self = this;
             document.addEventListener('click', function handleOutsideClick(event) {
-                if (!select.contains(event.target) && !target.contains(event.target)) {
-                    if (!self.requiredFieldMap[headerValue]) {
-                        if (select.value === currentValue) {
-                            if (select.value == '--None--' && currentValue == '--None--') {
-                                target.textContent = '';
-                            } else {
-                                target.textContent = currentValue;
-                            }
+                console.log('event Listner :',event.target);
+                console.log('select value : '+select.value);
+                console.log('current  value : '+currentValue);
+                console.log('header :',headerValue);
+                console.log('required val :',self.requiredFieldMap[headerValue]);
+                if (!select.contains(event.target) && !target.contains(event.target) ) {
+                   
+                    console.log('clicked outside');
+                    console.log('required val :',self.requiredFieldMap[headerValue]);
+                    if(!self.requiredFieldMap[headerValue]){
+                    if (select.value === currentValue) {
+                        if (select.value == '--None--' && currentValue == '--None--') {
+                            target.textContent = '';
+                        } else {
+                            target.textContent = currentValue;
+                            
+                           
                         }
                     }
-                    else {
-                        if (select.value === currentValue) {
-                            if (select.value == '--None--' && currentValue == '--None--') {
-                                target.textContent = '';
-                            } else {
-                                target.textContent = currentValue;
-                                target.style.border = '';
-                            }
+                }
+                else{
+                   
+                    console.log('required condi');
+
+                    console.log('select value : '+select.value);
+                    console.log('current  value : '+currentValue);
+                    if (select.value === currentValue) {
+                        if (select.value == '--None--' && currentValue == '--None--') {
+                            target.textContent = '';
+                        } else {
+                            target.textContent = currentValue;
+                            target.style.border = '';
                         }
                     }
+                    
+
+                }
+                  
                     document.removeEventListener('click', handleOutsideClick);
                 }
             });
+       
+
             target.textContent = '';
             target.appendChild(select);
-        }
+      
+     
+    }
 
-        else if (target.tagName === 'TD' && target.dataset.type === 'DATE' && this.inlineEditing && target.dataset.id !== '') {
-            const input = document.createElement('input');
-            input.type = 'date';
-            let currentDate = target.textContent.trim();
-            if (currentDate) {
-                const [month, day, year] = currentDate.split('/');
-                currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            }
-            input.value = currentDate;
-            input.style.width = '100%';
-            const currentValue = target.textContent.trim()
+    else if(target.tagName === 'TD' && target.dataset.type === 'DATE'){
+    
+    console.log('date field');
 
-            input.addEventListener('change', (event) => {
-                target.dataset.value = event.target.value;
-                target.dataset.edited = "true";
+    			     
+                        const input = document.createElement('input');
+                        input.type = 'date';
+                      
+                      let currentDate = target.textContent.trim();
 
-                if (event.target.value == currentDate) {
-                    target.textContent = currentValue;
-                    target.dataset.edited = "false";
-                }
-                const tr = target.closest('tr');
-                let isAnyFieldEdited = false;
-                tr.querySelectorAll('td').forEach(td => {
-                    if (td.dataset.edited === "true") {
-                        isAnyFieldEdited = true;
-                    }
-                });
+                     
+                      if (currentDate) {
+                          const [month, day, year] = currentDate.split('/');
+                          currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                      }
+                  
+                      input.value = currentDate;
 
-                const hiddenIdCell = tr.querySelector('td:first-child');
-                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
-                if (hiddenId) {
-                    if (!this.editedIds.includes(hiddenId.value)) {
-                        this.editedIds.push(hiddenId.value);
-                        this.showSubmit = true;
-                        this.stopColumnRender = true;
-                    }
-                    else if (event.target.value == currentDate && !isAnyFieldEdited) {
-                        let index = this.editedIds.indexOf(hiddenId.value);
-                        if (index !== -1) {
-                            this.editedIds.splice(index, 1);
-                        }
 
-                        if (this.editedIds.length == 0) {
-                            this.showSubmit = false;
-                        }
-                    }
-                }
-            });
+                        input.style.width = '100%';
+                        const currentValue= target.textContent.trim()
+                        console.log('text content :',target.textContent.trim());
+                        console.log('text content :',input.value);
+            
+             input.addEventListener('change', (event) => {
+             console.log('date changed :'+event.target.value);
+                          //  target.textContent = input.value;
+                             target.dataset.value = event.target.value;
+                            target.dataset.edited = "true";
+
+                            if(event.target.value==currentDate){
+                                target.textContent = currentValue;
+                                target.dataset.edited = "false";
+                            }
+                            const tr = target.closest('tr');
+
+                            
+                            let isAnyFieldEdited = false;
+                            tr.querySelectorAll('td').forEach(td => {
+            
+                                console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
+                                if (td.dataset.edited === "true") {
+                                    isAnyFieldEdited = true;
+                                }
+                            });
+
+                            const hiddenIdCell = tr.querySelector('td:first-child');
+                            const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                            if (hiddenId) {
+                              console.log('hiddenId  :', hiddenId.value);
+                                console.log('this.editedIds  :', this.editedIds);
+                                if (!this.editedIds.includes(hiddenId.value)) {
+                                    this.editedIds.push(hiddenId.value);
+                                          console.log('edited id inside1:', this.editedIds);
+                                    this.showSubmit = true;
+                                     this.stopColumnRender = true;
+                                }
+                                else if(event.target.value==currentDate && !isAnyFieldEdited){
+                                    console.log('this.editedIds 1 :', this.editedIds);
+                                    let index=this.editedIds.indexOf(hiddenId.value);
+                                    if(index !== -1){
+                                        this.editedIds.splice(index,1);
+                                    }
+                                    console.log('this.editedIds  2:', this.editedIds);
+                                    if(this.editedIds.length==0){
+                                        this.showSubmit=false;
+                                    }
+                                }
+                            }
+                        });
+            
+                        console.log('ids  :',this.editedIds);
+                        console.log('value of input :',input.value);
+          
+            
+
             document.addEventListener('click', function handleOutsideClick(event) {
+                console.log('event Listner :',input.value+'  value current :',currentValue);
+               
+                if (!input.contains(event.target) && !target.contains(event.target) ) {
+                    console.log('clicked outside');
 
-                if (!input.contains(event.target) && !target.contains(event.target)) {
-                    let conInputDate = input.value;
-                    if (conInputDate) {
-                        const [year, month, day] = conInputDate.split('-');
-                        conInputDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year}`;
+                    let conInputDate=input.value;
+                    if(conInputDate){
+                        const[year,month,day]=conInputDate.split('-');
+                        conInputDate=`${month.padStart(2,'0')}/${day.padStart(2,'0')}/${year}`;
                     }
+
+
                     if (conInputDate == currentValue) {
                         target.textContent = currentValue;
-                    }
+                    } 
+                  
                     document.removeEventListener('click', handleOutsideClick);
                 }
             });
-            target.textContent = '';
-            target.appendChild(input);
-        }
+            
+            
+            
+                          target.textContent = '';
+                        target.appendChild(input);
+            
+                        
+                      
+                      
+    
+    }
 
-        else if (target.tagName === 'TD' && target.dataset.type === 'DATETIME' && this.inlineEditing && target.dataset.id !== '') {
-            const input = document.createElement('input');
-            input.type = 'datetime-local';
-            let currentDate = target.textContent.trim();
-            if (currentDate) {
-                const [datePart, timePart, period] = currentDate.split(' ');
-                const [month, day, year] = datePart.split('/');
-                let [hours, minutes] = timePart.split(':');
-                if (period === 'PM' && hours !== '12') {
-                    hours = parseInt(hours, 10) + 12;
-                } else if (period === 'AM' && hours === '12') {
-                    hours = '00';
-                }
-                currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes.padStart(2, '0')}`;
-            }
-            input.value = currentDate;
-            input.style.width = '100%';
-            const currentValue = target.textContent.trim()
-            input.addEventListener('change', (event) => {
-                target.dataset.value = event.target.value;
-                target.dataset.edited = "true";
-                if (event.target.value == currentDate) {
-                    target.textContent = currentValue;
-                    target.dataset.edited = "false";
-                }
-                const tr = target.closest('tr');
-                let isAnyFieldEdited = false;
-                tr.querySelectorAll('td').forEach(td => {
-                    if (td.dataset.edited === "true") {
-                        isAnyFieldEdited = true;
+
+    else if(target.tagName === 'TD' && target.dataset.type === 'DATETIME'){
+    
+        console.log('date time field');
+    
+                         
+                            const input = document.createElement('input');
+                            input.type =  'datetime-local';
+                        
+                          let currentDate = target.textContent.trim();
+    
+                         
+                          if (currentDate) {
+                            const [datePart, timePart, period] = currentDate.split(' ');
+
+                            const [month, day, year] = datePart.split('/');
+                            let [hours, minutes] = timePart.split(':');
+                    
+                            if (period === 'PM' && hours !== '12') {
+                                hours = parseInt(hours, 10) + 12;
+                            } else if (period === 'AM' && hours === '12') {
+                                hours = '00';
+                            }
+                    
+                            currentDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes.padStart(2, '0')}`;
+                          }
+                      
+                          input.value = currentDate;
+    
+    
+                            input.style.width = '100%';
+                            const currentValue= target.textContent.trim()
+                            console.log('text content :',target.textContent.trim());
+                            console.log('text content :',input.value);
+                
+                 input.addEventListener('change', (event) => {
+                 console.log('date changed :'+event.target.value);
+                              //  target.textContent = input.value;
+                                 target.dataset.value = event.target.value;
+                                target.dataset.edited = "true";
+                                if(event.target.value==currentDate){
+                                    target.textContent = currentValue;
+                                    target.dataset.edited = "false";
+                                }
+                                const tr = target.closest('tr');
+
+                                let isAnyFieldEdited = false;
+                                tr.querySelectorAll('td').forEach(td => {
+                
+                                    console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
+                                    if (td.dataset.edited === "true") {
+                                        isAnyFieldEdited = true;
+                                    }
+                                });
+
+                                const hiddenIdCell = tr.querySelector('td:first-child');
+                                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
+                                if (hiddenId) {
+                                  console.log('hiddenId  :', hiddenId.value);
+                                    console.log('this.editedIds  :', this.editedIds);
+                                    if (!this.editedIds.includes(hiddenId.value)) {
+                                        this.editedIds.push(hiddenId.value);
+                                              console.log('edited id inside1:', this.editedIds);
+                                        this.showSubmit = true;
+                                         this.stopColumnRender = true;
+                                    }
+                                    else if(event.target.value==currentDate && !isAnyFieldEdited){
+                                        console.log('this.editedIds 1 :', this.editedIds);
+                                        let index=this.editedIds.indexOf(hiddenId.value);
+                                        if(index !== -1){
+                                            this.editedIds.splice(index,1);
+                                        }
+                                        console.log('this.editedIds  2:', this.editedIds);
+                                        if(this.editedIds.length==0){
+                                            this.showSubmit=false;
+                                        }
+                                    }
+                                }
+                            });
+                
+                            console.log('ids  :',this.editedIds);
+                            console.log('value of input :',input.value);
+                
+                
+    
+                document.addEventListener('click', function handleOutsideClick(event) {
+                    console.log('event Listner :',input.value+'  value current :',currentValue);
+                   
+                    if (!input.contains(event.target) && !target.contains(event.target) ) {
+                        console.log('clicked outside');
+    
+                        let conInputDate=input.value;
+                        if(conInputDate){
+                            const dateParts = conInputDate.split('T');
+                            const [year, month, day] = dateParts[0].split('-');
+                            const timeParts = dateParts[1].split(':');
+                
+                            let hours = parseInt(timeParts[0], 10);
+                            const minutes = timeParts[1];
+                            console.log('hrs :',hours);
+                
+                           
+                            const ampm = hours >= 12 ? 'PM' : 'AM';
+                            hours = hours % 12;
+                            hours = hours ? hours : 12; 
+                            console.log('ampm :',ampm);
+                
+                            conInputDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year} ${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+                            console.log('converted date:', conInputDate);
+                        }
+    
+    
+                        if (conInputDate == currentValue) {
+                            target.textContent = currentValue;
+                        } 
+                      
+                        document.removeEventListener('click', handleOutsideClick);
                     }
                 });
-
-                const hiddenIdCell = tr.querySelector('td:first-child');
-                const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
-                if (hiddenId) {
-                    if (!this.editedIds.includes(hiddenId.value)) {
-                        this.editedIds.push(hiddenId.value);
-                        this.showSubmit = true;
-                        this.stopColumnRender = true;
-                    }
-                    else if (event.target.value == currentDate && !isAnyFieldEdited) {
-                        let index = this.editedIds.indexOf(hiddenId.value);
-                        if (index !== -1) {
-                            this.editedIds.splice(index, 1);
-                        }
-                        if (this.editedIds.length == 0) {
-                            this.showSubmit = false;
-                        }
-                    }
-                }
-            });
-
-            document.addEventListener('click', function handleOutsideClick(event) {
-
-                if (!input.contains(event.target) && !target.contains(event.target)) {
-                    let conInputDate = input.value;
-                    if (conInputDate) {
-                        const dateParts = conInputDate.split('T');
-                        const [year, month, day] = dateParts[0].split('-');
-                        const timeParts = dateParts[1].split(':');
-                        let hours = parseInt(timeParts[0], 10);
-                        const minutes = timeParts[1];
-                        const ampm = hours >= 12 ? 'PM' : 'AM';
-                        hours = hours % 12;
-                        hours = hours ? hours : 12;
-                        conInputDate = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year} ${hours.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-                    }
-                    if (conInputDate == currentValue) {
-                        target.textContent = currentValue;
-                    }
-                    document.removeEventListener('click', handleOutsideClick);
-                }
-            });
-            target.textContent = '';
-            target.appendChild(input);
+                
+                
+                
+                              target.textContent = '';
+                            target.appendChild(input);
+                
+                            
+                          
+                       
+        
         }
-        else if (target.tagName === 'INPUT' && target.closest('td').dataset.id !== '') {
+        else if (target.tagName === 'INPUT') {
+        
+            console.log('target value before keyup ::',target.value);
             const tdout = target.closest('td');
+            console.log('original value2:', tdout.dataset.value);
             let currentValue = tdout.dataset.value;
-            target.readOnly = false;
-            target.style.border = '1px solid black';
-            target.style.outline = '1px solid black';
-            this.handleKeyup = (event) => {
+            console.log('current value out:', currentValue);
+        
+        
+           target.readOnly = false;
+    
+            target.style.border='1px solid black';
+             this.handleKeyup = (event)=> {
                 const tdin = target.closest('td');
                 target.style.backgroundColor = '#FAFAD2';
-                target.dataset.edited = "true";
+                target.dataset.edited="true";
                 tdin.dataset.edited = "true";
                 if (event.target.value === currentValue) {
                     target.style.backgroundColor = '';
                     tdin.dataset.edited = "false";
-                    target.dataset.edited = "false";
+                    target.dataset.edited="false";
                 }
-
+                
+                console.log('target value after::',target.value);
+                console.log('Key pressed:', event.key);
                 const tr = target.closest('tr');
+
                 let isAnyFieldEdited = false;
                 tr.querySelectorAll('td').forEach(td => {
 
+                    console.log('type :',td.dataset.type+' edited :',td.dataset.edited);
                     if (td.dataset.edited === "true") {
                         isAnyFieldEdited = true;
                     }
                 });
-
+               
                 const td = tr.querySelector('td:first-child');
-                const hiddenId = td.querySelector('input[type="hidden"]');
-                if (hiddenId) {
-                    if (!this.editedIds.includes(hiddenId.value)) {
-                        this.editedIds.push(hiddenId.value);
-                        this.showSubmit = true;
-                        this.stopColumnRender = true;
+                console.log('td value  :',td);
+   
+           
+   
+                   const hiddenId= td.querySelector('input[type="hidden"]'); 
+                   if(hiddenId){
+                console.log('hiddenId  :',hiddenId.value);
+                console.log('this.editedIds  :',this.editedIds);
+                
+   
+                try{
+                   if(!this.editedIds.includes(hiddenId.value)){
+                   this.editedIds.push(hiddenId.value);
+                   console.log('edited id inside1:',this.editedIds);
+                   this.showSubmit=true;
+                  this.stopColumnRender=true;
+                   }
+                   else if(event.target.value==currentValue && !isAnyFieldEdited ){
+                    console.log('this.editedIds 1 :', this.editedIds);
+                    let index=this.editedIds.indexOf(hiddenId.value);
+                    if(index !== -1){
+                        this.editedIds.splice(index,1);
                     }
-                    else if (event.target.value == currentValue && !isAnyFieldEdited) {
-                        let index = this.editedIds.indexOf(hiddenId.value);
-                        if (index !== -1) {
-                            this.editedIds.splice(index, 1);
-                        }
-                        if (this.editedIds.length == 0) {
-                            this.showSubmit = false;
-                        }
+                    console.log('this.editedIds  2:', this.editedIds);
+                    if(this.editedIds.length==0){
+                        this.showSubmit=false;
                     }
                 }
+               }
+               catch(error){
+                   console.log('err message ::',error.message);
+               }
+   
+           }
+            
+               
+           
+              
+            
+            
             };
-
-            this.handleBlur = (event) => {
-
-                if (event.target.value == currentValue) {
-                    target.readOnly = true;
+   
+            this.handleBlur=(event)=> {
+                console.log('event Listner :',target.value+'  value current :',currentValue);
+            
+                    console.log('clicked outside');
+                    if(event.target.value == currentValue) {
+                        target.readOnly = true;
+                        target.style.border = 'none';
+                     
+                    }
+                    target.readOnly=true;
                     target.style.border = 'none';
-                    target.style.outline = 'none';
-                }
-                target.readOnly = true;
-                target.style.border = 'none';
-                target.style.outline = 'none';
-                target.removeEventListener('keyup', this.handleKeyup);
+                    console.log("Removing keyup------------------------");
+                    target.removeEventListener('keyup', this.handleKeyup);
+
+             
+
+              
             }
 
+            
+            
+            
             // Adding the event listener
             target.removeEventListener('blur', this.handleBlur);
-
+         
+            console.log('remove keyup listner');
+            
             // Removing the event listener
+           
             target.addEventListener('blur', this.handleBlur);
             target.addEventListener('keyup', this.handleKeyup);
+            console.log('add keyup listner');
+   
+   
+            console.log('edited id inside:',this.editedIds);
+       
+    
         }
-        else if (target.tagName === 'TD' && target.dataset.lookup == 'LOOKUPNAME' && this.inlineEditing) {
+        
+     else if (target.tagName === 'TD') {
+         
+       console.log('entered in td');
+         const td = target.querySelector('td');
+         
+       
+      
+ 
+     }
+     console.log('edited id :',this.editedIds);
+ 
+ 
+ }
+ 
+ 
+ 
+ 
+ async submitData(){
+     if(this.editedIds.length>0){
+     console.log('id editted are :',this.editedIds);
+    
+     const checkedIds = [];
+     const jsonData = [];
+     let hasError=false;
+       
+ 
+     function isId(value) {
+         return typeof value === 'string' && /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/.test(value);
+     }
 
-            let selectedLabelinLi = '';
-            let selectedValueinLi;
-            let sss = target.dataset.header;
-            let s = sss.split('.');
+     const emailRegex = /^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
-            const input1 = document.createElement('input');
-            input1.type = 'search';
-            let currentVal = target.textContent;
-            target.textContent = '';
-            input1.value = currentVal;
+    function validateEmail(email) {
+         return emailRegex.test(email);
+     }
 
-            const dropdownDiv = document.createElement('div');
-            dropdownDiv.style.display = 'none';
-            dropdownDiv.style.border = '1px solid #ccc';
-            dropdownDiv.style.position = 'absolute';
-            dropdownDiv.style.zIndex = '1000';
-            dropdownDiv.style.backgroundColor = 'white';
-            const tr = target.closest('tr');
-            target.appendChild(input1);
-            target.appendChild(dropdownDiv);
-
-            input1.addEventListener('keyup', async (event) => {
-                let selectedVal = event.target.value;
-                if (this.debounceTimeout) {
-                    clearTimeout(this.debounceTimeout);
-                }
-                this.debounceTimeout = setTimeout(async () => {
-                    if (selectedVal.length > 0) {
-                        await this.fetchNamesOfObject(s[0], s[1], selectedVal);
-                        if (this.accountNames.length > 0) {
-                            dropdownDiv.innerHTML = '';
-
-                            const ul = document.createElement('ul');
-                            ul.style.border = '1px solid black';
-                            this.accountNames.forEach(account => {
-                                const li = document.createElement('li');
-                                li.textContent = account.label;
-                                li.dataset.value = account.value;
-                                li.style.padding = '4px';
-                                li.style.cursor = 'pointer';
-                                li.addEventListener('mouseover', () => {
-                                    li.style.backgroundColor = '#e0e0e0';
-                                    li.style.border = '1px solid blue';
-                                });
-                                li.addEventListener('mouseout', () => {
-                                    li.style.backgroundColor = '';
-                                    li.style.border = '';
-                                });
-                                ul.appendChild(li);
-
-                                li.addEventListener('click', (event) => {
-                                    selectedLabelinLi = event.target.textContent;
-                                    selectedValueinLi = event.target.dataset.value;
-                                    input1.value = selectedLabelinLi;
-                                    target.dataset.value = selectedValueinLi;
-                                    target.dataset.id = selectedValueinLi;
-                                    target.dataset.label = selectedLabelinLi;
-                                    if (selectedLabelinLi == 'No Data Available' || selectedLabelinLi == currentVal) {
-                                        target.dataset.edited = "false";
-                                    }
-                                    else {
-                                        target.dataset.edited = "true";
-                                    }
-
-                                    const hiddenIdCell = tr.querySelector('td:first-child');
-                                    const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
-                                    if (hiddenId && selectedLabelinLi !== 'No Data Available') {
-
-                                        if (!this.editedIds.includes(hiddenId.value) && selectedLabelinLi !== currentVal) {
-                                            this.editedIds.push(hiddenId.value);
-                                            this.showSubmit = true;
-                                            this.stopColumnRender = true;
-                                        }
-                                        else if (selectedLabelinLi == currentVal) {
-                                            let index = this.editedIds.indexOf(hiddenId.value);
-                                            if (index !== -1) {
-                                                this.editedIds.splice(index, 1);
-                                            }
-                                            if (this.editedIds.length == 0) {
-                                                this.showSubmit = false;
-                                            }
-                                        }
-                                    }
-                                    else if (this.editedIds.length == 0) {
-                                        this.showSubmit = false;
-                                    }
-                                    dropdownDiv.style.display = 'none';
-                                });
-                            })
-                            dropdownDiv.appendChild(ul);
-                            dropdownDiv.style.display = 'block';
-                        }
-                    }
-                    else {
-
-                        target.dataset.value = '';
-                        target.dataset.edited = 'true';
-                        currentVal = '';
-
-                        const hiddenIdCell = tr.querySelector('td:first-child');
-                        const hiddenId = hiddenIdCell.querySelector('input[type="hidden"]');
-                        if (hiddenId) {
-                            if (!this.editedIds.includes(hiddenId.value)) {
-                                this.editedIds.push(hiddenId.value);
-                                this.showSubmit = true;
-                                this.stopColumnRender = true;
-                            }
-
-                        }
-
-                        this.accountNames = [];
-                        dropdownDiv.style.display = 'none';
-                    }
-                }, 250)
-
-            })
-
-            document.addEventListener('click', function handleOutsideClick(event) {
-
-                if (!target.contains(event.target) && !dropdownDiv.contains(event.target)) {
-
-
-                    if (selectedLabelinLi == 'No Data Available' || (selectedLabelinLi == currentVal && currentVal != '')) {
-                        dropdownDiv.style.display = 'none';
-                        const link = document.createElement('a');
-                        link.href = target.dataset.linkid;
-                        link.textContent = currentVal;
-                        target.innerHTML = '';
-                        target.appendChild(link);
-                    }
-                    else if (selectedLabelinLi == currentVal && currentVal == '' && selectedValueinLi == undefined) {
-
-                        dropdownDiv.style.display = 'none';
-                        target.innerHTML = '';
-
-                    }
-                    else if (selectedLabelinLi == '' && currentVal !== '') {
-
-                        dropdownDiv.style.display = 'none';
-                        const link = document.createElement('a');
-                        link.href = target.dataset.linkid;
-                        link.textContent = currentVal;
-                        target.innerHTML = '';
-                        target.appendChild(link);
-                    }
-                    document.removeEventListener('click', handleOutsideClick);
-                }
-            });
-        }
+  function showToast(title, message, variant) {
+        const event = new ShowToastEvent({
+            title: title,
+            message: message,
+            variant: variant
+        });
+       this.dispatchEvent(event);
     }
+ 
+   
+     this.template.querySelectorAll('tr').forEach(tr1 => {
+       
+           const editedRow = {};
+           let idFound=false;
+           console.log('tr outerhtml  :',tr1.outerHTML); 
+       
+           const firstTd = tr1.querySelector('td:first-child');
+          
+         if (firstTd) {
+           
+           
+                console.log('hidden id');
 
-    // Getting all Names of Object
-    async fetchNamesOfObject(val1, val2, val3) {
-        try {
-            const result = await getNamesOfObject({ sObjectName: val1, field: val2, searchKey: val3 });
-            if (result.length == 0) {
-                this.accountNames = [{ label: 'No Data Available', value: 'no data' }];
-            }
-            else {
-                this.accountNames = result.map(account => ({
-                    label: account.label || 'No Data Available',
-                    value: account.id || 'no data'
-                }));
-            }
-        } catch (error) {
-            console.error('Error fetching account names', error);
-        }
-    }
+                const hiddenCol = firstTd.querySelector('input[type="hidden"]');
+                const tr = hiddenCol.closest('tr');
+                const tds = tr.querySelectorAll('td');
+                tds.forEach((td,index) => {
+                    const input = td.querySelector('input[type="text"]');
+                    const inputeditted = td.querySelector(' input[data-edited="true"]');
+                    const select = td.querySelector('select');
+                  
+
+                    if(input){
+                    console.log('data editted :',inputeditted);
+                        console.log('input data set :',input.dataset);
+                         
+                        console.log('input data set :',input.dataset.edited);
+                    }
 
 
-    handleSelectionChange(event) {
-        if (this.selectedTdElement) {
-            this.selectedTdElement.textContent = event.detail.label;
-        }
-    }
-
-    // Function to save all editted records to save in database
-    async submitData() {
-        if (this.editedIds.length > 0) {
-            const checkedIds = [];
-            let jsonData = [];
-            let filArray = [];
-            this.hasError = false;
-            const emailRegex = /^[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
-            const urlRegex = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/;
-
-            function validateUrl(url) {
-                return urlRegex.test(url);
-            }
-
-            function validateEmail(email) {
-                return emailRegex.test(email);
-            }
-
-            this.template.querySelectorAll('tr').forEach(tr1 => {
-                const editedRow = {};
-                let relatedEditedRow = {};
-                let idFound = false;
-                const firstTd = tr1.querySelector('td:first-child');
-
-                if (firstTd) {
-                    const hiddenCol = firstTd.querySelector('input[type="hidden"]');
-                    const tr = hiddenCol.closest('tr');
-                    const tds = tr.querySelectorAll('td');
-                    tds.forEach((td, index) => {
-                        const input = td.querySelector('input[type="text"]');
-                        const inputeditted = td.querySelector(' input[data-edited="true"]');
-                        const select = td.querySelector('select');
-
-                        // Handle Required fields of Object
-                        if (this.editedIds.includes(hiddenCol.value) && this.requiredFieldMap[td.dataset.header]) {
-                            let value;
-                            if (td.dataset.type === "STRING") {
-                                if (input) {
-                                    value = input.value;
-                                    if (value == '' && !td.dataset.header.includes('.')) {
-                                        td.style.border = '2px solid red';
-                                        this.errorToastMessage = true;
-                                        this.errorMsg = 'Please enter a value in required field.';
-                                        this.hasError = true;
-                                    }
-                                    else if (value == '' && td.dataset.header.includes('.')) {
-                                        let dotHeader = td.dataset.header.split('.');
-                                        this.requiredToastMessage(dotHeader, hiddenCol.value, td);
-
-                                    }
-
-                                }
-                            }
-                            else if (td.dataset.type === 'PICKLIST') {
-                                const tdValue = td.textContent;
-                                if (select) {
-                                    value = select.value;
-
-                                }
-                                if ((tdValue == '' || value == '--None--') && !td.dataset.header.includes('.')) {
-                                    td.style.border = '2px solid red';
-                                    this.errorToastMessage = true;
-                                    this.errorMsg = 'Please enter a value in required field.';
-                                    this.hasError = true;
-
-                                }
-                                else if ((td.dataset.value == '' || td.dataset.value == '--None--') && td.dataset.header.includes('.')) {
-                                    let dotHeader = td.dataset.header.split('.');
-                                    this.requiredToastMessage(dotHeader, hiddenCol.value, td);
-
-                                }
-                            }
-                            else if (td.dataset.type === 'DATE') {
-                                if ((td.dataset.value == "null" || td.dataset.value == '') && !td.dataset.header.includes('.')) {
-                                    td.style.border = '2px solid red';
-
-                                    this.errorToastMessage = true;
-                                    this.errorMsg = 'Please enter a value in required field.';
-                                    this.hasError = true;
-                                }
-                                else if ((td.dataset.value == '' || td.dataset.value == 'null') && td.dataset.header.includes('.')) {
-                                    let dotHeader = td.dataset.header.split('.');
-                                    this.requiredToastMessage(dotHeader, hiddenCol.value, td);
-                                }
-                            }
-                            else if (td.dataset.type === 'DATETIME') {
-                                if ((td.dataset.value == "null" || td.dataset.value == '') && !td.dataset.header.includes('.')) {
-                                    td.style.border = '2px solid red';
-                                    this.errorToastMessage = true;
-                                    this.errorMsg = 'Please enter a value in required field.';
-                                    this.hasError = true;
-                                }
-                                else if ((td.dataset.value == '' || td.dataset.value == "null") && td.dataset.header.includes('.')) {
-                                    let dotHeader = td.dataset.header.split('.');
-                                    this.requiredToastMessage(dotHeader, hiddenCol.value, td);
+                    if(this.editedIds.includes(hiddenCol.value) && this.requiredFieldMap[td.dataset.header]){
+                    
+                        let value;
+                        console.log('header :', td.dataset.header);
+                        console.log('td value :', td.textContent);
+                        if(td.dataset.type === "STRING"){
+                            if(input){
+                                console.log('input value :',input.value);
+                                value=input.value;
+                                if(value==''){
+                                    td.style.border='2px solid red';
+                                
+                                  this.errorToastMessage = true;
+                                  this.errorMsg = 'Please enter a value in required field.';  
+                                  hasError=true;
                                 }
                             }
                         }
+                       else if(td.dataset.type==='PICKLIST'){
+                        const tdValue=td.textContent;
+                        if(select){
+                            value=select.value;
+                           console.log('select value is :',value);
+                           
+                        }
 
-                        // Collecting edited records of Object and related Objects
-                        if ((input && input.dataset.edited == 'true') || (select && td.dataset.edited === "true") || (td.dataset.type === 'DATE' && td.dataset.edited === 'true') || (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') || (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true') || (td.dataset.lookup === 'LOOKUPNAME' && td.dataset.edited === 'true')) {
-                            const td2 = tr1.querySelector('td:nth-child(2)');
-                            if (td2) {
-                                const checkbox = td2.querySelector('input[type="checkbox"]');
-                                if (checkbox) {
-                                    const header = this.tableHeaders[index - 2];
-                                    if (this.fieldTypeMap[header] !== 'PICKLIST' && this.fieldTypeMap[header] !== 'DATE' && this.fieldTypeMap[header] !== 'DATETIME' && this.fieldTypeMap[header] !== 'BOOLEAN' && td.dataset.lookup !== 'LOOKUPNAME') {
-                                        if ((this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value) && input.value !== '') || (this.fieldTypeMap[header] == 'URL' && !validateUrl(input.value) && input.value !== '')) {
-                                            input.style.border = '2px solid red';
-                                            this.errorToastMessage = true;
-                                            this.errorMsg = (this.fieldTypeMap[header] == 'EMAIL')
-                                                ? 'Please enter a proper email address.'
-                                                : (this.fieldTypeMap[header] == 'URL')
-                                                    ? 'Please enter a proper URL address.'
-                                                    : '';
-                                            this.hasError = true;
-                                            return;
-                                        }
-                                        if (!header.includes('.')) {
-                                            editedRow['Id'] = hiddenCol.value;
-                                            editedRow[header] = input.value;
-                                        }
-                                        else {
-                                            let obj = this.processedDataForJson(header, hiddenCol.value, input.value);
-                                            relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                        }
-                                    }
-                                    else if (select) {
-                                        if (!header.includes('.')) {
-                                            editedRow['Id'] = hiddenCol.value;
-                                            editedRow[header] = select.value;
-                                        }
-                                        else {
+                           if(tdValue=='' || value=='--None--'){
+                            td.style.border='2px solid red';
+                      
+                            this.errorToastMessage = true;
+                            this.errorMsg = 'Please enter a value in required field.';
+                            hasError=true;
+                        
+                           }
+                       }
+                       else if(td.dataset.type==='DATE'){
 
-                                            let obj = this.processedDataForJson(header, hiddenCol.value, select.value);
-                                            relatedEditedRow = { ...relatedEditedRow, ...obj };
+                        console.log('date field is :',td.dataset.value);
+                        if(td.dataset.value=="null"){
+                            td.style.border='2px solid red';
+                           
+                            this.errorToastMessage = true;
+                            this.errorMsg = 'Please enter a value in required field.';
+                            hasError=true;
+                        }
 
-                                        }
-                                    }
-                                    else if (td.dataset.type === 'DATE' && td.dataset.edited === 'true') {
-                                        if (this.editedIds.includes(hiddenCol.value)) {
-                                            if (!header.includes('.')) {
-                                                editedRow['Id'] = hiddenCol.value;
-                                                editedRow[header] = td.dataset.value;
-                                            }
-                                            else {
-                                                let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
-                                                relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                            }
-                                        }
-                                    }
-                                    else if (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') {
-                                        if (this.editedIds.includes(hiddenCol.value)) {
-                                            if (!header.includes('.')) {
-                                                editedRow['Id'] = hiddenCol.value;
-                                                editedRow[header] = td.dataset.value;
-                                            }
-                                            else {
-                                                let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
-                                                relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                            }
-                                        }
-                                    }
-                                    else if (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true') {
 
-                                        let head = td.dataset.header;
-                                        if (!head.includes('.')) {
-                                            editedRow['Id'] = hiddenCol.value;
-                                            editedRow[header] = td.dataset.value;
-                                        }
-                                        else {
-                                            let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
-                                            relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                        }
-                                    }
-                                    else if (td.dataset.lookup === 'LOOKUPNAME' && td.dataset.edited === 'true') {
-                                        let newHeader
-                                        if (header.includes('.')) {
-                                            newHeader = header.split('.');
-                                            if (newHeader[0].endsWith('__r')) {
-                                                newHeader = newHeader[0].replace('__r', '__c');
-                                            }
-                                            else {
-                                                newHeader = newHeader[0] + 'Id';
-                                            }
-                                        }
-                                        editedRow['Id'] = hiddenCol.value;
+                       }
 
-                                        editedRow[newHeader] = td.dataset.value;
-                                    }
+                       else if(td.dataset.type==='DATETIME'){
+
+                        console.log('date time field is :',td.dataset.value);
+                        if(td.dataset.value=="null"){
+                            td.style.border='2px solid red';
+                          
+                           this.errorToastMessage = true;
+                                     this.errorMsg = 'Please enter a value in required field.';
+                            hasError=true;
+                        }
+
+
+                       }
+                        
+                      
+                        
+
+                    }
+
+
+
+               
+
+
+
+
+
+                    console.log('Value start:', td.textContent+'  index  :'+ index);
+                    
+
+                    
+
+                  
+
+
+
+                    if(td.dataset.type==='DATE' && td.dataset.edited ==='true'){
+console.log('date field is eddited :',td.dataset.value);
+                    }
+
+                    if((input && input.dataset.edited=='true') || (select && td.dataset.edited === "true") || (td.dataset.type==='DATE' && td.dataset.edited ==='true') || (td.dataset.type==='DATETIME' && td.dataset.edited ==='true') || (td.dataset.type==='BOOLEAN' && td.dataset.edited ==='true') ){
+                        console.log('input condition');
+                        console.log('input value  :  hidden value  :'+hiddenCol.value);
+                     
+                        editedRow['Id'] = hiddenCol.value;
+                    
+                        console.log('headers :'+this.tableHeaders);
+                        const td2 = tr1.querySelector('td:nth-child(2)');
+                        if(td2){
+                            const checkbox = td2.querySelector('input[type="checkbox"]');
+                            if(checkbox){
+                                const header = this.tableHeaders[index-2];
+                                if(this.fieldTypeMap[header]!=='PICKLIST'){
+                                
+                                     if(this.fieldTypeMap[header]=='EMAIL' && !validateEmail(input.value)){
+                                    console.log('email :' ,validateEmail(input.value));
+                                    input.style.border='2px solid red';
+                                    
+                                      this.errorToastMessage = true;
+                                     this.errorMsg = 'Please enter a proper email address.';
+                            hasError=true;
+                                    
+                                  
+                                    return;
                                 }
-                                else if (select) {
-                                    const header = this.tableHeaders[index - 1];
-                                    if (!header.includes('.')) {
-                                        editedRow['Id'] = hiddenCol.value;
-                                        editedRow[header] = select.value;
-                                    }
-                                    else {
-                                        let obj = this.processedDataForJson(header, hiddenCol.value, select.value);
-                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                    }
-
-                                }
-                                else if (td.dataset.type === 'DATE' && td.dataset.edited === 'true') {
-                                    const header = this.tableHeaders[index - 1];
-
-
-                                    if (!header.includes('.')) {
-                                        editedRow['Id'] = hiddenCol.value;
-                                        editedRow[header] = td.dataset.value;
-                                    }
-                                    else {
-                                        let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
-                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                    }
-                                }
-
-                                else if (td.dataset.type === 'DATETIME' && td.dataset.edited === 'true') {
-                                    const header = this.tableHeaders[index - 1];
-                                    if (!header.includes('.')) {
-                                        editedRow['Id'] = hiddenCol.value;
-                                        editedRow[header] = td.dataset.value;
-                                    }
-                                    else {
-                                        let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
-                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                    }
-                                }
-
-                                else if (td.dataset.type === 'BOOLEAN' && td.dataset.edited === 'true') {
-                                    const header = this.tableHeaders[index - 1];
-                                    if (!header.includes('.')) {
-                                        editedRow['Id'] = hiddenCol.value;
-                                        editedRow[header] = td.dataset.value;
-                                    }
-                                    else {
-                                        let obj = this.processedDataForJson(header, hiddenCol.value, td.dataset.value);
-                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                    }
-                                }
-
-                                else if (td.dataset.lookup === 'LOOKUPNAME' && td.dataset.edited === 'true') {
-                                    const header = this.tableHeaders[index - 1];
-                                    let newHeader
-                                    if (header.includes('.')) {
-                                        newHeader = header.split('.');
-                                        if (newHeader[0].endsWith('__r')) {
-                                            newHeader = newHeader[0].replace('__r', '__c');
-                                        }
-                                        else {
-                                            newHeader = newHeader[0] + 'Id';
-                                        }
-                                    }
-                                    editedRow['Id'] = hiddenCol.value;
-                                    editedRow[newHeader] = td.dataset.value;
-                                }
-
-                                else {
-                                    const header = this.tableHeaders[index - 1];
-
-                                    if (this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value)) {
-                                        input.style.border = '2px solid red';
-                                        this.errorToastMessage = true;
-                                        this.errorMsg = 'Please enter a proper email address.';
-                                        this.hasError = true;
-                                        return;
-                                    }
-                                    if (!header.includes('.')) {
-                                        editedRow['Id'] = hiddenCol.value;
-                                        editedRow[header] = input.value;
-                                    }
-                                    else {
-                                        let obj = this.processedDataForJson(header, hiddenCol.value, input.value);
-                                        relatedEditedRow = { ...relatedEditedRow, ...obj };
-                                    }
-                                }
+                                editedRow[header] = input.value; 
+                                console.log('checkbox condt.');
                             }
-                            else {
+                                else if(select){
+                                    console.log('select condt.11');
+                                   
+                                    editedRow[header] = select.value;
+                                }
+                                else if(td.dataset.type==='DATE' && td.dataset.edited ==='true'){
+                                    console.log('date condition :');
+                                    
+                                    if(this.editedIds.includes(hiddenCol.value)){
+                                    editedRow[header] = td.dataset.value;
+                                    }
+    
+                                }
+
+                                else if(td.dataset.type==='DATETIME' && td.dataset.edited ==='true'){
+                                    console.log('date time condition :');
+                                    
+                                    if(this.editedIds.includes(hiddenCol.value)){
+                                    editedRow[header] = td.dataset.value;
+                                    }
+    
+                                }
+
+                                else if(td.dataset.type==='BOOLEAN' && td.dataset.edited ==='true'){
+                                    console.log('Boolean condition :');
+                                   
+                                 
+                                    editedRow[header] = td.dataset.value;
+                                 
+    
+                                }
+
+                         
+
+                            }
+                            else if (select) { 
+                                console.log('select condt.');
                                 const header = this.tableHeaders[index - 1];
-                                if (this.fieldTypeMap[header] == 'EMAIL' && !validateEmail(input.value)) {
-                                    this.errorToastMessage = true;
-                                    this.errorMsg = 'Please enter a proper email address';
-                                    this.hasError = true;
+                            
+                                editedRow[header] = select.value;
+                           
+                            }
+                            else if(td.dataset.type==='DATE' && td.dataset.edited ==='true'){
+                                console.log('date condition :');
+                                const header = this.tableHeaders[index - 1];
+                           
+                                editedRow[header] = td.dataset.value;
+                           
+
+                            }
+
+                            else if(td.dataset.type==='DATETIME' && td.dataset.edited ==='true'){
+                                console.log('date time condition :');
+                                const header = this.tableHeaders[index - 1];
+                      
+                                editedRow[header] = td.dataset.value;
+                       
+
+                            }
+
+                            else if(td.dataset.type==='BOOLEAN' && td.dataset.edited ==='true'){
+                                console.log('Boolean condition :');
+                                const header = this.tableHeaders[index - 1];
+                      
+                                editedRow[header] = td.dataset.value;
+                            
+
+                            }
+
+                        
+                       
+                      
+                            else{
+                                const header = this.tableHeaders[index-1];
+
+                                if(this.fieldTypeMap[header]=='EMAIL' && !validateEmail(input.value) ){
+                                    console.log('email :' ,validateEmail(input.value));
+                                    input.style.border='2px solid red';
+                                   
+                                     this.errorToastMessage = true;
+                                     this.errorMsg = 'Please enter a proper email address.';
+                            hasError=true;
                                     return;
                                 }
                                 editedRow[header] = input.value;
+                                console.log('without checkbox condt.');
+                                console.log('input value :',input.value);
                             }
                         }
-                    });
-
-                    if (editedRow && Object.keys(editedRow).length > 0) {
-                        jsonData.push(editedRow);
-                    }
-                    if (relatedEditedRow && Object.keys(relatedEditedRow).length > 0) {
-                        // Handle data with same related ObjectId and edited field
-                        filArray = jsonData.filter(item => item.Id !== relatedEditedRow.Id);
-                        const existItem = jsonData.find(item => item.Id == relatedEditedRow.Id);
-
-                        if (existItem) {
-                            const merge = { ...existItem, ...relatedEditedRow };
-                            filArray.push(merge);
-                        } else {
-                            filArray.push(relatedEditedRow);
-                        }
-
-                        jsonData = filArray;
-                    }
-                }
-            });
-            if (this.hasError) {
-                return;
-            }
-
-            // Saving the data to database
-            const result = await updateSObject({ jsonData: JSON.stringify(jsonData) })
-
-            if (result.startsWith('Record')) {
-                const trs = this.template.querySelectorAll('tr');
-
-                for (const tr of trs) {
-                    const tds = tr.querySelectorAll('td');
-
-                    for (const td of tds) {
-                        if (td && td.dataset.edited == 'true') {
-                            const trins = td.closest('tr');
-                            const tds = trins.querySelectorAll('td');
-                            tds.forEach((td) => {
-                                const input = td.querySelector('input[type="hidden"]');
-                                if (input) {
-                                    if (!this.hidColId.includes(input.value)) {
-                                        this.hidColId.push(input.value);
-                                    }
+                       
+                   else{
+                        const header = this.tableHeaders[index-1];
+                             if(this.fieldTypeMap[header]=='EMAIL' && !validateEmail(input.value)){
+                                    console.log('email :' ,validateEmail(input.value));
+                                   
+                                     this.errorToastMessage = true;
+         this.errorMsg = 'Please enter a proper email address';
+                            hasError=true;
+                                    return;
                                 }
-                            })
+                        editedRow[header] = input.value;
+                        console.log('without checkbox condt.2');
+                      }
 
-                            if (td.dataset.header.includes('.')) {
-                                let idToFind = td.dataset.header.split('.')[0];
-                                if (!idToFind.endsWith('__r')) {
-                                    idToFind = idToFind + 'Id';
-                                }
-                                else {
-                                    idToFind = idToFind.replace('__r', '__c');
-                                }
-
-                                this.globalData.filter((row) => {
-                                    return row[idToFind] == td.dataset.id;
-                                }).map((row) => {
-                                    if (!this.hidColId.includes(row.Id)) {
-                                        this.hidColId.push(row.Id);
-                                    }
-                                })
-                            }
-                        }
                     }
-                }
-                // Updating the records in table after saving records in database
-                for (const tr of trs) {
-                    const tds = tr.querySelectorAll('td');
-                    for (const td of tds) {
-                        if (td && td.dataset.edited == 'true') {
-                            const referenceFieldData2 = this.getReferenceFieldData2(jsonData);
 
-                            const updatedRecords2 = await getRelatedRecords({ referenceData: referenceFieldData2 });
+                  
 
 
-                            updatedRecords2.forEach((editedEntry) => {
-                                let idToUpdate = editedEntry.Id;
-                                this.globalData = this.globalData.map((entry) => {
-
-                                    if (entry.Id == idToUpdate) {
-
-
-                                        Object.keys(entry).forEach((key) => {
-                                            if (typeof entry[key] === 'object' && entry[key] !== null) {
-                                                if (!(key in editedEntry) && key !== 'attributes') {
-                                                    // If the object itself is missing, set it to null
-
-                                                    editedEntry[key] = { ...entry[key] }; // Copy the object structure
-                                                    Object.keys(entry[key]).forEach((subKey) => {
-                                                        if ((subKey in editedEntry[key]) && subKey !== 'attributes') {
-                                                            editedEntry[key][subKey] = ''; // Set missing sub-properties to ''
-                                                        }
-                                                    })
-                                                } else if (typeof editedEntry[key] === 'object') {
-                                                    // If the object exists in editedEntry, check sub-properties
-                                                    Object.keys(entry[key]).forEach((subKey) => {
-                                                        if (!(subKey in editedEntry[key]) && subKey !== 'attributes') {
-                                                            editedEntry[key][subKey] = ''; // Set missing sub-properties to ''
-                                                        }
-                                                    });
-                                                }
-
-                                            }
-                                            else {
-
-                                                if (!(key in editedEntry) && key !== 'attributes') {
-                                                    editedEntry[key] = '';
-
-                                                }
-
-
-                                            }
-
-                                        });
-                                        const updatedEntry = { ...entry, ...editedEntry };
-
-                                        return updatedEntry;
-                                    }
-                                    return entry;
-                                })
-                            })
-                        }
-                    }
-                }
-
-                this.successToastMessage = true;
-                this.successMsg = result;
-                this.successToastMessage = true;
-                this.successMsg = result;
-                jsonData.forEach((editedEntry) => {
-                    const idToUpdate = editedEntry.Id;
-                    this.globalData = this.globalData.map((entry) => {
-                        if (entry.Id === idToUpdate) {
-
-                            const updatedEntry = { ...entry, ...editedEntry };
-
-                            for (let key in updatedEntry) {
-
-                                if (updatedEntry[key] === '--None--') {
-                                    updatedEntry[key] = '';
-                                }
-                            }
-
-
-                            return updatedEntry;
-                        }
-                        return entry;
-                    });
+                    
                 });
-            }
-            else {
-                this.errorToastMessage = true;
-                this.errorMsg = result;
-            }
-            this.editedIds = [];
-            this.showSubmit = false;
-            this.populateTableBody();
-            const inputElement = this.template.querySelector('[data-id="searchInput"]');
-            inputElement.value = '';
-            this.tableDataPn = this.globalData;
-            this.showInput = false;
-            const allArrowIcons = this.template.querySelectorAll('lightning-icon');
-            allArrowIcons.forEach(icon => {
-                icon.classList.remove('arrowIconShow');
-            });
-        }
-    }
-
-    // Handle Update of the rows after saving the record.
-    getReferenceFieldData2(jsonData) {
-        const referenceFields = [];
-        this.hidColId.forEach(row => {
-            referenceFields.push({ query: this.soql, id: row, fields: this.tableHeaders.toString() });
-        })
-        return referenceFields;
-
-    }
-
-    //Handle Cancel Button 
-    handleCancel() {
-        if (this.editedIds.length > 0) {
-            this.populateTableBody();
-            this.editedIds = [];
-        }
-        this.showSubmit = false;
-    }
-
-    // Handle Closing of succes toast message
-    handleClose() {
-        this.successToastMessage = false;
-    }
-
-    // Handle Closing of succes toast message
-    handleErrorClose() {
-        this.errorToastMessage = false;
-    }
-
-    // Handle csv data
-    handleCsvData() {
-        handleCsvData.bind(this)(this.selectedRows, this.globalData, this.tableHeaderLabel, this.tableHeaders);
-    }
-
-    // Handle xls data
-    handleExcelData() {
-        handleExcelData.bind(this)(this.selectedRows, this.globalData, this.tableHeaderLabel, this.tableHeaders);
-    }
-
-    // Handle Json Data of Related Objects 
-    processedDataForJson(head, hidColVal, tdVal) {
-        let relatedEditedRow = {};
-        let dotHeader = head.split('.');
-        if (dotHeader[1] !== 'Name') {
-            this.globalData.find((entry) => {
-                if (entry.Id == hidColVal) {
-
-                    if (!dotHeader[0].endsWith('__r')) {
-                        let newHeader = dotHeader[0] + '.Name';
-                        this.template.querySelectorAll('tr').forEach(tr1 => {
-                            const firstTd = tr1.querySelector('td:first-child');
-
-                            if (firstTd) {
-                                const hiddenCol = firstTd.querySelector('input[type="hidden"]');
-
-                                if (hiddenCol.value == hidColVal) {
-                                    const tr = hiddenCol.closest('tr');
-                                    const tds = tr.querySelectorAll('td');
-                                    tds.forEach(td => {
-                                        if (td.dataset.header == newHeader) {
-                                            relatedEditedRow['Id'] = td.dataset.id;
-                                        }
-                                    })
-                                }
-                            }
-                        })
-                        relatedEditedRow[dotHeader[1]] = tdVal;
-                    }
-                    else {
-                        let newHeader = dotHeader[0].replace('__r', '__r.Name');
-                        this.template.querySelectorAll('tr').forEach(tr1 => {
-                            const firstTd = tr1.querySelector('td:first-child');
-
-                            if (firstTd) {
-                                const hiddenCol = firstTd.querySelector('input[type="hidden"]');
-                                if (hiddenCol.value == hidColVal) {
-                                    const tr = hiddenCol.closest('tr');
-                                    const tds = tr.querySelectorAll('td');
-                                    tds.forEach(td => {
-                                        if (td.dataset.header == newHeader) {
-                                            relatedEditedRow['Id'] = td.dataset.id;
-                                        }
-                                    })
-                                }
-                            }
-                        })
-                        relatedEditedRow[dotHeader[1]] = tdVal;
-                    }
+                if(editedRow && Object.keys(editedRow).length > 0){
+                jsonData.push(editedRow);
                 }
-            })
-            return relatedEditedRow;
+ 
+         }
+          
+     });
+
+
+        if (hasError) {
+            return; 
         }
-    }
+    
+  
+      console.log('json data', JSON.stringify(jsonData));
+    
+ 
+   await updateSObject({jsonData:JSON.stringify(jsonData)})
+  .then(result => {
+     
+     if (result.startsWith('Record')) {
+ console.log('success');
+ this.successToastMessage = true;
+ this.successMsg = result;
 
-    // Validation Toast Message for Required Fields
-    requiredToastMessage(header, hiddenColVal, td) {
-        let dotHeader = header;
-        let newHeader;
-        if (dotHeader[1] !== 'Name') {
-            if (!dotHeader[0].endsWith('__r')) {
-                newHeader = dotHeader[0] + 'Id';
-            }
-            else {
-                newHeader = dotHeader[0].replace('__r', '__c');
-            }
-
-            this.globalData.find((entry) => {
-
-                if (entry.Id == hiddenColVal && entry[newHeader] !== undefined && entry[newHeader] !== '') {
-                    td.style.border = '2px solid red';
-                    this.errorToastMessage = true;
-                    this.errorMsg = 'Please enter a value in required field.';
-                    this.hasError = true;
+ jsonData.forEach((editedEntry) => {
+     const idToUpdate = editedEntry.Id;
+  
+     this.globalData = this.globalData.map((entry) => {
+         if (entry.Id === idToUpdate) {
+            const updatedEntry = { ...entry, ...editedEntry };
+             for (let key in updatedEntry) {
+                if (updatedEntry[key] === '--None--') {
+                    updatedEntry[key] = '';
                 }
-            })
-        }
+            }
+            
+            return updatedEntry;
+         }
+         return entry;
+     });
+ });
+     }
+     else{
+         console.log('fail');
+         this.errorToastMessage = true;
+         this.errorMsg = result;
+   
+     }
+     
+ 
+   
+     
+ 
+    
+ 
+  })
+
+  this.editedIds=[];
+  this.showSubmit=false;
+  
+  this.populateTableBody();
+ 
+ 
+     }
+ 
+ }
+
+ handleCancel(){
+    if(this.editedIds.length>0){
+        this.populateTableBody();
+        this.editedIds=[];
     }
+    this.showSubmit=false;
+}
+
+handleClose() {
+    this.successToastMessage = false;
+}
+
+handleErrorClose() {
+    this.errorToastMessage = false;
+}
+
+
 }
