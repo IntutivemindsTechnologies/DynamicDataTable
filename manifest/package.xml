@@ -3,44 +3,12 @@
     <types>
         <members>DynamicDataTableHandler</members>
         <members>DynamicDataTableHandlerTestClass</members>
-        <members>DynamicDataTableConstant</members>
         <name>ApexClass</name>
     </types>
    
     <types>
         <members>dynamicDataTable</members>
         <name>LightningComponentBundle</name>
-    </types>
-   
-    <types>
-        <members>Dynamic_DataTable</members>
-        <name>FlexiPage</name>
-    </types>
-    
-    <types>
-        <members>Query__c</members>
-        <name>CustomObject</name>
-    </types>
-    
-    <types>
-        <members>Query__c-Query Layout</members>
-        <name>Layout</name>
-    </types>
- 
-    <types>
-        <members>Admin</members>
-        <name>Profile</name>
-    </types>
-   
-    <types>
-        <members>Dynamic_DataTable</members>
-        <members>Query__c</members>
-        <name>CustomTab</name>
-    </types>
-   
-    <types>
-        <members>Dynamic_DataTable</members>
-        <name>CustomApplication</name>
     </types>
     
     <version>59.0</version>
