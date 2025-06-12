@@ -36,12 +36,12 @@
 
 
                                 </div>
-                                <div>
+                                 <div>
 
                                     <ul class="slds-button-group-row">
 
-                                        <li class="slds-button-group-item ">
-                                            <lightning-input label="Global Search" class="custom-search icon_size"
+                                        <li>
+                                            <lightning-input label="Global Search" class="custom-search slds-m-right_xx-small"
                                                 type="search" placeholder="Search the list..." onkeyup={handleKeyUp}
                                                 oncommit={handleCross} data-id="searchInput"
                                                 variant="label-hidden"></lightning-input>
@@ -500,11 +500,7 @@
                                             onclick={handleCsvData}>Download CSV File </span>
 
                                     </li>
-                                    <li class="slds-dropdown__item slds-p-around_medium" role="presentation">
-                                        <span class="slds-text-body_small " style="cursor:pointer;"
-                                            onclick={handleExcelData}>Download XLS File </span>
-
-                                    </li>
+                                   
 
                                 </template>
 

@@ -1,6 +1,8 @@
 let handleJsonDataClickSec = (component) => {
   try {
+    console.log('data');
     component.handleGlobalReset();
+      //component.saveState();
     component.isLoadingData = true;
     
     const textarea = component.template.querySelector('[data-id=myJsonTextarea]');
@@ -15,12 +17,16 @@ let handleJsonDataClickSec = (component) => {
 
       component.tableData = textarea.value;
       if (component.tableData.toLowerCase().trim().indexOf("[") === 0) {
+        console.log('json data');
         component.showCustomError = false;
         component.showtoggle = false;
         component.isDrawerVisible = false;
         component.firstBox = false;
         component.isDrawerOpen = false;
+      //  component.globalData = component.tableData;
 
+          //this.tableHeaders = Object.keys(this.tableData[0]);
+ component.resetVariables();
       }
       else {
         component.isDrawerVisible = true;
@@ -102,7 +108,9 @@ let handleJsonDataClickSec = (component) => {
       component.objectLabel = component.objectLabelFromProperty;
     }
     component.loadTableData();
+    console.log('end');
     component.stopColumnRender = false;
+    console.log('end2 :: ',component.tableData);
   }
   catch (error) {
     console.error('error in ', error);

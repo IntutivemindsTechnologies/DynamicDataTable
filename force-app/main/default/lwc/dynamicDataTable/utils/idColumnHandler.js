@@ -41,7 +41,7 @@ let handleIdColumn = (event,component) => {
         if (component.toggleIdColumn == false) {
             component.tableHeaders = component.tableHeaders.filter(header => !component.tableHeaderToRemove.includes(header));
             component.tableHeaderLabel = component.tableHeaderLabel.filter(header => !component.tableHeaderLabelToRemove.includes(header));
-            component.stopColumnRender == true;
+            component.stopColumnRender == true;   
             component.populateTableBody2(component.visibleData);
         }
         else {

@@ -2,7 +2,7 @@ let handleJsonDataClick = (component) =>{
 
 component.handleGlobalReset();
 
-       
+        // component.saveState();
         component.isLoadingData = true;
      
         
@@ -22,6 +22,7 @@ component.handleGlobalReset();
            if( component.tableData.toLowerCase().trim().indexOf("[") === 0){
           
             component.showCustomError=false;
+            component.standardQueryLabel='';
             component.showtoggle=false;
             component.isDrawerVisible = false;
             component.firstBox=false;
@@ -53,6 +54,7 @@ component.handleGlobalReset();
              }
            
              component.tableData = textarea2.value;
+             component.soql = textarea2.value;
             if( component.tableData.toLowerCase().trim().indexOf("select") === 0){
             
 component.isDrawerVisible = false;
@@ -66,6 +68,7 @@ component.isDrawerVisible = false;
              component.isLoading = true;
              component.rowSize = 10;
              component.rowOffset = 0;
+             component.standardQueryLabel='';
         
              if(component.showtoggleProperty){
                 component.showtoggle=true;

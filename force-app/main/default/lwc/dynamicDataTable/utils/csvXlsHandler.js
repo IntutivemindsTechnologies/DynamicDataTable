@@ -91,12 +91,35 @@ let handleExcelData = (selectedRows,globalData,tableHeaderLabel,tableHeaders) =>
     createXlsDownload(doc);
 }
 
-let createXlsDownload = (doc) =>{
-    const link = document.createElement("a");
-    link.href = "data:application/vnd.ms-excel," + encodeURIComponent(doc);
-    link.target = "_blank";
-    link.download = "data.xls";
+let createXlsDownload = (doc) => {
+    const fullHtml = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office"
+              xmlns:x="urn:schemas-microsoft-com:office:excel"
+              xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                table, th, td {
+                    border: 1px solid black;
+                }
+            </style>
+        </head>
+        <body>
+            ${doc}
+        </body>
+        </html>`;
+
+    const base64 = btoa(unescape(encodeURIComponent(fullHtml)));
+    const dataUri = 'data:application/vnd.ms-excel;base64,' + base64;
+
+    const link = document.createElement('a');
+    link.href = dataUri;
+    link.download = 'data.xls';
+    document.body.appendChild(link);
     link.click();
-}
+    document.body.removeChild(link);
+};
+
+
 
 export {handleCsvData,convertToCsvFile,createDownload,handleExcelData,createXlsDownload};
