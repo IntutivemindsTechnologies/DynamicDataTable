@@ -33,6 +33,8 @@ import { handleFileCLick } from "./utils/fileDropdownHandler";
 import { handleGlobalReset2 } from "./utils/globalResetSec";
 import { toggleDrawer } from "./utils/settingPopup";
 import getQueryValues from '@salesforce/apex/DynamicDataTableHandler.getQueryValues';
+import getQueryByName from '@salesforce/apex/DynamicDataTableHandler.getQueryByName';
+
 
 
 
@@ -150,6 +152,21 @@ export default class DynamicDataTable extends LightningElement {
     @track jsonInput = '';
     @track soqlInput = '';
     @track isSettingPopup;
+    @api filter = '';
+    @api selectedRow = '';
+    @api standardQueryLabel;
+    @api isStateRestored = false;
+    @api test;
+    @api jsonList;
+    @api flowPresent = false;
+    @api notFlowData =false;
+
+
+    
+
+
+
+   
 
 
 
@@ -162,6 +179,7 @@ export default class DynamicDataTable extends LightningElement {
     handleJsonInputChange(event) {
         this.jsonInput = event.target.value;
     }
+
 
 
     get isSoqlButtonDisabled() {
@@ -177,6 +195,8 @@ export default class DynamicDataTable extends LightningElement {
         return this.isDrawerOpen ? 'drawer slide-in' : 'drawer slide-out';
 
     }
+
+    
 
     // To handle file outside click
     handleFileOutsideClick = (event) => {
@@ -224,6 +244,10 @@ export default class DynamicDataTable extends LightningElement {
             
         }
     }
+
+
+
+
 
     //To Open Popup from Setting Icon
     toggleDrawer() {
@@ -330,15 +354,89 @@ export default class DynamicDataTable extends LightningElement {
         }, 100);
     }
 
+
+
     disconnectedCallback() {
+    
         window.removeEventListener('click', this.handleOutsideClick);
         clearInterval(this.interval);
     }
 
+
+
+saveState() {
+    const state = {
+        data: this.globalData,
+        data5: this.soql,
+         data11: this.toggleIdColumn,
+         data12: this.showtoggle,
+         data13: this.showReferenceToggle,
+         data14: this.toggleIdColumn,
+         data15: this.isIdColumnVisible,
+         data26: this.standardQueryLabel,
+      data27: this.flowRecord,
+      data28: this.flowPresent,
+      data29: this.notFlowData
+    };
+ 
+    sessionStorage.setItem('dynamicDataTableState', JSON.stringify(state));
+}
+
+
+restoreState() {
+    const saved = sessionStorage.getItem('dynamicDataTableState');
+    if (saved) {
+         this.isStateRestored = true;
+        const state = JSON.parse(saved);
+              this.jsonList = state.data;
+              this.soql = state.data5;
+              this.toggleIdColumn = state.data11;
+              this.showtoggle = state.data12;
+              this.showReferenceToggle =state.data13;
+              this.toggleIdColumn = state.data14;
+              this.isIdColumnVisible =state.data15;
+              this.standardQueryLabel = state.data26;
+              this.flowRecord = state.data27;
+              this.flowPresent = state.data28;
+              this.notFlowData = state.data29;     
+    }
+    
+}
+
+
+    
     connectedCallback() {
+
+          getQueryValues()
+            .then(result => {
+                this.statusOptions = Object.keys(result).map(key => ({
+                    label: key,
+                    value: result[key]
+                }));
+            })
+            .catch(error => {
+               console.log('error ::',error);
+            })
+   
+        this.restoreState();
+   
         window.addEventListener('click', this.handleOutsideClick);
+        
+        
+      
         this.firstBox = true;
-        if (this.flowRecord.length > 0) {
+          if(this.isStateRestored ){  
+          this.isLoadingData = true;
+            this.firstBox=false;
+            if(!this.flowPresent){
+              this.loadTableData();
+            }
+            
+         this.stopColumnRender=false;
+            
+        }
+        if (this.flowRecord.length > 0 && !this.notFlowData) {
+            this.isStateRestored=false;
             this.firstBox = false;
             this.mainDropdownVal = 'flowdata';
             if (this.objectLabelFromProperty == undefined) {
@@ -347,33 +445,50 @@ export default class DynamicDataTable extends LightningElement {
             else {
                 this.objectLabel = this.objectLabelFromProperty;
             }
+            
             this.loadTableData();
         }
 
-        getQueryValues()
-            .then(result => {
-                this.statusOptions = Object.keys(result).map(key => ({
-                    label: key,
-                    value: result[key]
-                }));
-            })
-            .catch(error => {
-
-            })
+      
 
     }
 
+  
+
+
     // To handle JSON Data Click
     handleJsonDataClick() {
+       
         handleJsonDataClick.bind(this)(this);
     }
 
     handleJsonDataClickSec() {
+ 
         handleJsonDataClickSec.bind(this)(this);
     }
     
     //To load Data in table 
-    loadTableData() {
+  async  loadTableData() {
+    if(this.isStateRestored){
+   if(this.standardQueryLabel !=''){
+  this.test = await getQueryByName({ name: this.standardQueryLabel });
+this.tableData=this.test;
+this.isStateRestored=false;
+ 
+    }
+      else if(this.soql !=''){
+         this.tableData=this.soql;
+    this.isStateRestored=false;   
+     }
+    else{
+    this.tableData = JSON.stringify(this.jsonList);
+    this.isStateRestored =false;
+
+    }
+   
+    }
+        
+ 
         if (this.tableData !== undefined) {
             try {
                 // Condition for Json input
@@ -387,7 +502,9 @@ export default class DynamicDataTable extends LightningElement {
                         this.totalRecords = this.globalData.length;
                         this.isLoading = false;
                         this.isLoadingData = false;
-
+                           this.enableInfiniteLoading = false;
+                            this.flowPresent = false;
+                            this.notFlowData = true;
                         if (this.objectLabel == null) {
                             this.objectLabel = 'JSON Data';
                         }
@@ -414,6 +531,9 @@ export default class DynamicDataTable extends LightningElement {
                         })
                     this.showReferenceToggle = true;
                     this.getSoqlData();
+                         this.flowPresent = false;
+                         this.notFlowData = true;
+
                 }
                 else {
                     this.isLoading = false;
@@ -423,7 +543,7 @@ export default class DynamicDataTable extends LightningElement {
                 }
             }
             catch (error) {
-                console.error('error is 33 ::', JSON, stringify(error));
+                console.error('error is 33 ::',error);
                 this.isLoading = false;
                 this.isLoadingData = false;
                 this.tableData = false;
@@ -436,13 +556,16 @@ export default class DynamicDataTable extends LightningElement {
             this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
         }
         // Condition for flow record input
-        else if (this.flowRecord.length > 0) {
+        else if (this.flowRecord.length > 0 && !this.notFlowData) {
             this.tableData = JSON.parse(JSON.stringify(this.flowRecord));
             this.tableHeaders = Object.keys(this.tableData[0]);
             this.tableHeaderLabel = this.tableHeaders;
             this.tableDataPn = this.flowRecord;
             this.globalData = this.tableDataPn;
+            this.flowPresent = true;
+            this.notFlowData = false;
             this.isLoading = false;
+            
             this.enableInfiniteLoading = false;
 
             if (this.objectLabel == null) {
@@ -459,6 +582,8 @@ export default class DynamicDataTable extends LightningElement {
             this.tableData = false;
             this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
         }
+
+      
 
     }
 
@@ -673,7 +798,6 @@ export default class DynamicDataTable extends LightningElement {
     renderedCallback() {
 
         if (this.tableDataPn && this.tableDataPn.length > 0 && !this.stopColumnRender) {
-
             this.populateTableBody();
 
         }
@@ -1036,6 +1160,10 @@ export default class DynamicDataTable extends LightningElement {
             this.tableData = false;
             this.tableDataErrorMsg = 'There is some issue while populating data in the table';
         }
+       
+            this.saveState();
+        
+      
     }
 
 
@@ -1189,7 +1317,6 @@ export default class DynamicDataTable extends LightningElement {
                                 }
                                 else if (!this.isUpdatableMap[header]) {
                                     if (typeof row[header.split('.')[0]][header.split('.')[1]] == 'object') {
-                                        // //console.log(' od data ::',Object.values(row[header]).filter(items => items !== null ).join(','));
                                         td.textContent = row[header.split('.')[0]][header.split('.')[1]] == undefined ? '' : Object.values(row[header.split('.')[0]][header.split('.')[1]]).filter(items => items !== null && items !== '').join(',');
                                         td.dataset.header = header;
                                         td.dataset.value = Object.values(row[header.split('.')[0]][header.split('.')[1]]);
@@ -2384,7 +2511,7 @@ export default class DynamicDataTable extends LightningElement {
                                 }
                             })
 
-                            if (td.dataset.header.includes('.')) {
+                            if (td.dataset.header && td.dataset.header.includes('.')) {
                                 let idToFind = td.dataset.header.split('.')[0];
                                 if (!idToFind.endsWith('__r')) {
                                     idToFind = idToFind + 'Id';

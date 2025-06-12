@@ -14,7 +14,7 @@ let handleOptionSelect = (event, component) => {
   else {
     component.soqlLoadData = true;
     component.soqlTextBox = false;
-    const label = event.currentTarget.dataset.label;
+    component.standardQueryLabel = event.currentTarget.dataset.label;
     const value = event.currentTarget.dataset.value;
     component.successToastMessage = false;
     component.toggleIdColumn = true;

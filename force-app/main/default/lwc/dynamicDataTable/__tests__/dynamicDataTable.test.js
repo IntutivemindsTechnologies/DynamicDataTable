@@ -1,4 +1,4 @@
-import { createElement } from 'lwc';
+
 import DynamicDataTable from 'c/dynamicDataTable';
 
 describe('c-dynamic-data-table', () => {

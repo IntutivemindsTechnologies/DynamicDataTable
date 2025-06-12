@@ -625,4 +625,22 @@ public with sharing class DynamicDataTableHandler {
         return values;
     }
     
+    
+    @AuraEnabled
+public static String getQueryByName(String name) {
+    if (String.isBlank(name)) {
+        return null;
+    }
+
+    Query__c queryRecord = [
+        SELECT Query__c 
+        FROM Query__c 
+        WHERE Name = :name AND Active__c = true 
+        LIMIT 1
+    ];
+System.debug('query is ::'+queryRecord.Query__c);
+    return queryRecord.Query__c;
+}
+
+    
 }

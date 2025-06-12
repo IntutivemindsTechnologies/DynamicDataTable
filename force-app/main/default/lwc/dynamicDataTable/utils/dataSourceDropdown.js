@@ -28,6 +28,7 @@ let handleDropChange = (event,component) =>{
       }
 
       else{
+        component.notFlowData = false;
         component.mainDropdownVal =  event.detail.value;     
         component.isDrawerVisible=false;
         component.isDrawerOpen=false;   
