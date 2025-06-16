@@ -643,4 +643,13 @@ System.debug('query is ::'+queryRecord.Query__c);
 }
 
     
+ 
+     @AuraEnabled(cacheable = true)
+    public static Boolean hasPermissionSet(String permissionSetName) {
+        Id currentUserId = UserInfo.getUserId();
+
+        List<PermissionSetAssignment> psa = [SELECT Id FROM PermissionSetAssignment WHERE AssigneeId = :currentUserId AND PermissionSet.Name = :permissionSetName LIMIT 1];
+        return !psa.isEmpty();
+    }
+    
 }

@@ -27,10 +27,7 @@
         <name>Layout</name>
     </types>
  
-    <types>
-        <members>Admin</members>
-        <name>Profile</name>
-    </types>
+  
    
     <types>
         <members>Dynamic_DataTable</members>
@@ -42,6 +39,11 @@
         <members>Dynamic_DataTable</members>
         <name>CustomApplication</name>
     </types>
+
+    <types>
+    <members>DDT</members>
+    <name>PermissionSet</name>
+  </types>
     
     <version>59.0</version>
 </Package>
