@@ -34,6 +34,8 @@ import { handleGlobalReset2 } from "./utils/globalResetSec";
 import { toggleDrawer } from "./utils/settingPopup";
 import getQueryValues from '@salesforce/apex/DynamicDataTableHandler.getQueryValues';
 import getQueryByName from '@salesforce/apex/DynamicDataTableHandler.getQueryByName';
+import hasPermissionSet from '@salesforce/apex/DynamicDataTableHandler.hasPermissionSet';
+import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 
 
 
@@ -143,7 +145,7 @@ export default class DynamicDataTable extends LightningElement {
     @api soqlLoadData = false;
     @api lastUpdatedTime = new Date();
     @track isDrawerOpen = false;
-    @api firstBox;
+    @api firstBox = false;
     @api isFileDropdown = false;
     @api isAdditionalFunction;
     @api drawerStyle;
@@ -160,6 +162,7 @@ export default class DynamicDataTable extends LightningElement {
     @api jsonList;
     @api flowPresent = false;
     @api notFlowData =false;
+    @api hasAccess = false;
 
 
     
@@ -404,9 +407,37 @@ restoreState() {
 }
 
 
+
+
+   checkPermission(){
+        hasPermissionSet({ permissionSetName:'DDT' })
+            .then((result) => {
+                if (result) {
+                    this.hasAccess = true;
+                } else {
+                    this.hasAccess = false;
+                    this.dispatchEvent(
+                        new ShowToastEvent({ 
+                            title: 'Permission Error',
+                            message: 'Permission required to access the component.',
+                            variant:'error',
+                            mode:'sticky'
+                        })
+                    );
+                }
+            })
+            .catch((error) => {
+                console.error(error);
+                this.hasAccess = false;
+            });
+    }
+
+
+
     
     connectedCallback() {
-
+     
+this.checkPermission();
           getQueryValues()
             .then(result => {
                 this.statusOptions = Object.keys(result).map(key => ({

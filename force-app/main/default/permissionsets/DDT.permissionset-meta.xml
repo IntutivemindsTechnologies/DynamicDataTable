@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+
+    <label>Dynamic DataTable Permissions</label>
+    
+   <classAccesses>
+        <apexClass>DynamicDataTableHandler</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DynamicDataTableHandlerTestClass</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+ 
+
+
+    <objectPermissions>
+        <allowCreate>true</allowCreate>
+        <allowDelete>true</allowDelete>
+        <allowEdit>true</allowEdit>
+        <allowRead>true</allowRead>
+        <modifyAllRecords>true</modifyAllRecords>
+        <object>Query__c</object>
+        <viewAllRecords>true</viewAllRecords>
+    </objectPermissions>
+
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Query__c.Query__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Query__c.Active__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+
+    <tabSettings>
+    <tab>Query__c</tab>
+    <visibility>Visible</visibility>
+</tabSettings>
+
+<tabSettings>
+    <tab>Dynamic_DataTable</tab>
+    <visibility>Visible</visibility>
+</tabSettings>
+
+
+
+ <applicationVisibilities>
+        <application>Dynamic_DataTable</application>
+        
+        <visible>true</visible>
+    </applicationVisibilities>
+
+
+</PermissionSet>

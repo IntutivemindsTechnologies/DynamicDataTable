@@ -1,4 +1,5 @@
 <template>
+    <template if:true={hasAccess}>
 
     <template if:true={isLoadingData}>
         <div class="slds-is-relative loadingSpinner slds-m-top_x-large">
@@ -1493,6 +1494,9 @@
 
 
 
+</template>
+<template if:false={hasAccess}>
 
+</template>
 
 </template>
