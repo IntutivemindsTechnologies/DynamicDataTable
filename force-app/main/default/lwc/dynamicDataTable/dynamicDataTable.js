@@ -40,7 +40,8 @@ import {ShowToastEvent} from 'lightning/platformShowToastEvent';
 
 
 
-export default class DynamicDataTable extends LightningElement {
+
+export default class DynamicDataTable extends  LightningElement {
 
     @api tableData;
     tableHeaders = [];
@@ -119,7 +120,7 @@ export default class DynamicDataTable extends LightningElement {
     hasError = false;
     @api jsonData = false;
     @api soqlData = false;
-    @api statusOptions;
+    @track statusOptions;
     queryData = false;
     @track isChecked = false;
     @api customQuery;
@@ -171,12 +172,17 @@ export default class DynamicDataTable extends LightningElement {
 
    
 
-
+  get hasStatusOptions(){
+        return this.statusOptions.length > 0;
+    }
 
 
     get isButtonDisabled() {
         return !this.jsonInput || this.jsonInput.trim().length === 0;
     }
+
+ 
+    
   
     // To get value in Json Textbox
     handleJsonInputChange(event) {
@@ -438,7 +444,8 @@ restoreState() {
     connectedCallback() {
      
 this.checkPermission();
-          getQueryValues()
+try{
+getQueryValues()
             .then(result => {
                 this.statusOptions = Object.keys(result).map(key => ({
                     label: key,
@@ -448,6 +455,12 @@ this.checkPermission();
             .catch(error => {
                console.log('error ::',error);
             })
+}       
+catch(error){
+console.log('error',error);
+}
+
+
    
         this.restoreState();
    
@@ -501,8 +514,13 @@ this.checkPermission();
     //To load Data in table 
   async  loadTableData() {
     if(this.isStateRestored){
-   if(this.standardQueryLabel !=''){
+   if(this.standardQueryLabel !='' && this.standardQueryLabel != undefined){
   this.test = await getQueryByName({ name: this.standardQueryLabel });
+   const result = await getQueryValues();
+        this.statusOptions = Object.keys(result).map(key => ({
+            label: key,
+            value: result[key]
+        }));
 this.tableData=this.test;
 this.isStateRestored=false;
  

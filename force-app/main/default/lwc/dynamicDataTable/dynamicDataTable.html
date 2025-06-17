@@ -365,14 +365,14 @@
 
                                                                     <ul class="slds-listbox slds-listbox_vertical"
                                                                         role="group" aria-label="Custom Query">
-                                                                        <li role="presentation"
+                                                                        <!-- <li role="presentation"
                                                                             class="slds-listbox__item">
                                                                             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                                 role="presentation">
                                                                                 <h3 class="slds-listbox__option-header">
                                                                                     Custom Query</h3>
                                                                             </div>
-                                                                        </li>
+                                                                        </li> -->
                                                                         <li role="presentation"
                                                                             class="slds-listbox__item">
                                                                             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
@@ -391,14 +391,16 @@
 
                                                                     <ul class="slds-listbox slds-listbox_vertical"
                                                                         role="group" aria-label="Standard Query">
+                                                                         
                                                                         <li role="presentation"
                                                                             class="slds-listbox__item">
                                                                             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                                 role="presentation">
                                                                                 <h3 class="slds-listbox__option-header">
-                                                                                    Standard Query</h3>
+                                                                                    Saved Query</h3>
                                                                             </div>
                                                                         </li>
+                                                                        <template if:true={hasStatusOptions}>
                                                                         <template for:each={statusOptions}
                                                                             for:item="opt">
                                                                             <li key={opt.value} role="presentation"
@@ -416,6 +418,16 @@
                                                                                 </div>
                                                                             </li>
                                                                         </template>
+                                                                        </template>
+                                                                        <template if:false={hasStatusOptions}>
+        <li role="presentation" class="slds-listbox__item">
+        
+             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
+                                                                        role="option">
+                                                                        <h3 class="">Use the Query Tab to configure saved queries</h3>
+                                                                    </div>
+        </li>
+    </template>
                                                                     </ul>
                                                                 </div>
                                                             </div>
@@ -956,14 +968,14 @@
 
                                                                     <ul class="slds-listbox slds-listbox_vertical"
                                                                         role="group" aria-label="Custom Query">
-                                                                        <li role="presentation"
+                                                                        <!-- <li role="presentation"
                                                                             class="slds-listbox__item">
                                                                             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                                 role="presentation">
                                                                                 <h3 class="slds-listbox__option-header">
                                                                                     Custom Query</h3>
                                                                             </div>
-                                                                        </li>
+                                                                        </li> -->
                                                                         <li role="presentation"
                                                                             class="slds-listbox__item">
                                                                             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
@@ -982,6 +994,7 @@
 
                                                                     <ul class="slds-listbox slds-listbox_vertical"
                                                                         role="group" aria-label="Standard Query">
+                                                                        
                                                                         <li role="presentation"
                                                                             class="slds-listbox__item">
                                                                             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
@@ -990,6 +1003,7 @@
                                                                                     Standard Query</h3>
                                                                             </div>
                                                                         </li>
+                                                                        <template if:true={hasStatusOptions}>
                                                                         <template for:each={statusOptions}
                                                                             for:item="opt">
                                                                             <li key={opt.value} role="presentation"
@@ -1007,6 +1021,16 @@
                                                                                 </div>
                                                                             </li>
                                                                         </template>
+                                                                        </template>
+                                                                         <template if:false={hasStatusOptions}>
+        <li role="presentation" class="slds-listbox__item">
+        
+             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
+                                                                        role="option">
+                                                                        <h3 class="">Use the Query Tab to configure saved queries</h3>
+                                                                    </div>
+        </li>
+    </template>
                                                                     </ul>
                                                                 </div>
                                                             </div>
@@ -1371,13 +1395,13 @@
 
                                                             <ul class="slds-listbox slds-listbox_vertical" role="group"
                                                                 aria-label="Custom Query">
-                                                                <li role="presentation" class="slds-listbox__item">
+                                                                <!-- <li role="presentation" class="slds-listbox__item">
                                                                     <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                         role="presentation">
                                                                         <h3 class="slds-listbox__option-header">Custom
                                                                             Query</h3>
                                                                     </div>
-                                                                </li>
+                                                                </li> -->
                                                                 <li role="presentation" class="slds-listbox__item">
                                                                     <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                         role="option" onclick={handleOptionSelect}
@@ -1394,13 +1418,15 @@
 
                                                             <ul class="slds-listbox slds-listbox_vertical" role="group"
                                                                 aria-label="Standard Query">
+                                                               
                                                                 <li role="presentation" class="slds-listbox__item">
                                                                     <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                         role="presentation">
-                                                                        <h3 class="slds-listbox__option-header">Standard
+                                                                        <h3 class="slds-listbox__option-header">Saved
                                                                             Query</h3>
                                                                     </div>
                                                                 </li>
+                                                               <template if:true={hasStatusOptions}>
                                                                 <template for:each={statusOptions} for:item="opt">
                                                                     <li key={opt.value} role="presentation"
                                                                         class="slds-listbox__item">
@@ -1415,6 +1441,17 @@
                                                                         </div>
                                                                     </li>
                                                                 </template>
+                                                                  </template>
+
+                                                                   <template if:false={hasStatusOptions}>
+        <li role="presentation" class="slds-listbox__item">
+        
+             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
+                                                                        role="option">
+                                                                        <h3 class="">Use the Query Tab to configure saved queries</h3>
+                                                                    </div>
+        </li>
+    </template>
                                                             </ul>
                                                         </div>
                                                     </div>
