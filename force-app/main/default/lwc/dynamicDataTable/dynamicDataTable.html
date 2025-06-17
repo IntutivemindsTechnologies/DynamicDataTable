@@ -381,7 +381,7 @@
                                                                                 data-label="Write own query">
                                                                                 <span class="slds-media__body">
                                                                                     <span class="slds-truncate"
-                                                                                        title="Write own query">Write
+                                                                                        title="Write own query">Write your
                                                                                         own query</span>
                                                                                 </span>
                                                                             </div>
@@ -397,7 +397,7 @@
                                                                             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                                 role="presentation">
                                                                                 <h3 class="slds-listbox__option-header">
-                                                                                    Saved Query</h3>
+                                                                                    Saved Queries</h3>
                                                                             </div>
                                                                         </li>
                                                                         <template if:true={hasStatusOptions}>
@@ -984,7 +984,7 @@
                                                                                 data-label="Write own query">
                                                                                 <span class="slds-media__body">
                                                                                     <span class="slds-truncate"
-                                                                                        title="Write own query">Write
+                                                                                        title="Write own query">Write your
                                                                                         own query</span>
                                                                                 </span>
                                                                             </div>
@@ -1000,7 +1000,7 @@
                                                                             <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                                 role="presentation">
                                                                                 <h3 class="slds-listbox__option-header">
-                                                                                    Standard Query</h3>
+                                                                                    Saved Queries</h3>
                                                                             </div>
                                                                         </li>
                                                                         <template if:true={hasStatusOptions}>
@@ -1359,7 +1359,7 @@
                                     <div class="slds-p-around_small">
 
 
-
+     
 
 
 
@@ -1408,8 +1408,7 @@
                                                                         data-label="Write own query">
                                                                         <span class="slds-media__body">
                                                                             <span class="slds-truncate"
-                                                                                title="Write own query">Write own
-                                                                                query</span>
+                                                                                title="Write own query">Write your own query</span>
                                                                         </span>
                                                                     </div>
                                                                 </li>
@@ -1418,15 +1417,14 @@
 
                                                             <ul class="slds-listbox slds-listbox_vertical" role="group"
                                                                 aria-label="Standard Query">
-                                                               
+                                                               <template if:true={hasStatusOptions}>
                                                                 <li role="presentation" class="slds-listbox__item">
                                                                     <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                         role="presentation">
-                                                                        <h3 class="slds-listbox__option-header">Saved
-                                                                            Query</h3>
+                                                                        <h3 class="slds-listbox__option-header">Saved Queries</h3>
                                                                     </div>
                                                                 </li>
-                                                               <template if:true={hasStatusOptions}>
+                                                               
                                                                 <template for:each={statusOptions} for:item="opt">
                                                                     <li key={opt.value} role="presentation"
                                                                         class="slds-listbox__item">
@@ -1442,7 +1440,7 @@
                                                                     </li>
                                                                 </template>
                                                                   </template>
-
+<!-- 
                                                                    <template if:false={hasStatusOptions}>
         <li role="presentation" class="slds-listbox__item">
         
@@ -1451,7 +1449,7 @@
                                                                         <h3 class="">Use the Query Tab to configure saved queries</h3>
                                                                     </div>
         </li>
-    </template>
+    </template> -->
                                                             </ul>
                                                         </div>
                                                     </div>
@@ -1461,10 +1459,12 @@
 
 
 
+<template if:false={hasStatusOptions}>
 
-
-
-
+                               <div class="slds-form-element slds-form-element_helper-text slds-m-left_small">
+            <span>Use the Query Tab to configure saved queries</span>
+        </div>
+</template>
 
 
 
@@ -1481,6 +1481,8 @@
                                             </div>
                                         </template>
                                     </div>
+                                    
+           
                                 </template>
 
                                 <template if:true={soqlTextBox}>
