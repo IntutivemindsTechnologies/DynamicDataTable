@@ -18,6 +18,7 @@ let handleJsonDataClickSec = (component) => {
       component.tableData = textarea.value;
       if (component.tableData.toLowerCase().trim().indexOf("[") === 0) {
         console.log('json data');
+        component.standardQueryLabel='';
         component.showCustomError = false;
         component.showtoggle = false;
         component.isDrawerVisible = false;
@@ -52,6 +53,7 @@ let handleJsonDataClickSec = (component) => {
       component.tableData = textarea2.value;
       if (component.tableData.toLowerCase().trim().indexOf("select") === 0) {
         component.isDrawerVisible = false;
+        component.standardQueryLabel='';
         component.firstBox = false;
         component.isDrawerOpen = false;
         component.showCustomError = false;

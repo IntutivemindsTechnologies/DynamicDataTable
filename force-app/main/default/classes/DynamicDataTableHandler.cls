@@ -612,10 +612,15 @@ public with sharing class DynamicDataTableHandler {
         return picklistValues;
     }
 
-     @AuraEnabled(cacheable=true)
+     @AuraEnabled
     public static Map<String,String> getQueryValues(){
         Map<String,String> values = new Map<String,String>();
         List<SObject> queryList = [Select Id,Name,Query__c, Active__c from Query__c where Active__c=true];
+        
+        if (queryList.isEmpty()) {
+    
+    return values; 
+}
         
         for(SObject queryData:queryList){
            values.put((String)queryData.get('Name'),(String)queryData.get('Query__c'));
@@ -632,14 +637,18 @@ public static String getQueryByName(String name) {
         return null;
     }
 
-    Query__c queryRecord = [
+     List<Query__c> queryRecord = [
         SELECT Query__c 
         FROM Query__c 
         WHERE Name = :name AND Active__c = true 
         LIMIT 1
     ];
-System.debug('query is ::'+queryRecord.Query__c);
-    return queryRecord.Query__c;
+     if (queryRecord.isEmpty()) {
+        return null;
+    } 
+    
+System.debug('query is ::'+queryRecord[0].Query__c);
+    return queryRecord[0].Query__c;
 }
 
     
