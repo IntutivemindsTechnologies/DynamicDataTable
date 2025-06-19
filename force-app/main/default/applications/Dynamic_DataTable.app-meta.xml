@@ -11,7 +11,7 @@
     <isNavTabPersistenceDisabled>false</isNavTabPersistenceDisabled>
     <label>Dynamic DataTable</label>
     <navType>Standard</navType>
-    <tabs>Dynamic_DataTable</tabs>
+    <tabs>DDTIM</tabs>
     <tabs>Query__c</tabs>
     <uiType>Lightning</uiType>
     

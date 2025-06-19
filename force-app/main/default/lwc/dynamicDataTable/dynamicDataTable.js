@@ -374,6 +374,14 @@ export default class DynamicDataTable extends  LightningElement {
 
 
 saveState() {
+
+const pathname = window.location.pathname;
+
+ if (pathname !== '/lightning/n/DDTIM') {
+        return; 
+    }
+
+
     const state = {
         data: this.globalData,
         data5: this.soql,
@@ -382,10 +390,8 @@ saveState() {
          data13: this.showReferenceToggle,
          data14: this.toggleIdColumn,
          data15: this.isIdColumnVisible,
-         data26: this.standardQueryLabel,
-      data27: this.flowRecord,
-      data28: this.flowPresent,
-      data29: this.notFlowData
+         data26: this.standardQueryLabel
+ 
     };
  
     sessionStorage.setItem('dynamicDataTableState', JSON.stringify(state));
@@ -393,6 +399,16 @@ saveState() {
 
 
 restoreState() {
+const pathname = window.location.pathname;
+
+ if (pathname !== '/lightning/n/DDTIM') {
+        return; 
+    }
+
+
+         const currentUrl = window.location.href;
+ console.log('current url ::',currentUrl);
+
     const saved = sessionStorage.getItem('dynamicDataTableState');
     if (saved) {
          this.isStateRestored = true;
@@ -405,9 +421,7 @@ restoreState() {
               this.toggleIdColumn = state.data14;
               this.isIdColumnVisible =state.data15;
               this.standardQueryLabel = state.data26;
-              this.flowRecord = state.data27;
-              this.flowPresent = state.data28;
-              this.notFlowData = state.data29;     
+             
     }
     
 }
@@ -442,6 +456,7 @@ restoreState() {
 
     
     connectedCallback() {
+     console.log('connect');
      
 this.checkPermission();
 try{
@@ -461,26 +476,23 @@ console.log('error',error);
 }
 
 
-   
-        this.restoreState();
+   if (this.flowRecord.length == 0 ){
+this.restoreState();
+   }
+        
    
         window.addEventListener('click', this.handleOutsideClick);
         
         
       
         this.firstBox = true;
-          if(this.isStateRestored ){  
-          this.isLoadingData = true;
-            this.firstBox=false;
-            if(!this.flowPresent){
-              this.loadTableData();
-            }
-            
-         this.stopColumnRender=false;
-            
-        }
-        if (this.flowRecord.length > 0 && !this.notFlowData) {
+        
+         if (this.flowRecord.length > 0 ) {   
+            console.log('enter');
             this.isStateRestored=false;
+            this.standardQueryLabel ='';
+            this.soql='';
+            this.jsonList=[];
             this.firstBox = false;
             this.mainDropdownVal = 'flowdata';
             if (this.objectLabelFromProperty == undefined) {
@@ -489,10 +501,24 @@ console.log('error',error);
             else {
                 this.objectLabel = this.objectLabelFromProperty;
             }
-            
-            this.loadTableData();
+            console.log('end');
+           setTimeout(() => {
+    this.loadTableData();
+}, 0); 
         }
-
+      
+          if(this.isStateRestored ){  
+          this.isLoadingData = true;
+            this.firstBox=false;
+           
+              this.loadTableData();
+         
+            
+         this.stopColumnRender=false;
+            
+        }
+       
+  
       
 
     }
@@ -514,15 +540,17 @@ console.log('error',error);
     //To load Data in table 
   async  loadTableData() {
     if(this.isStateRestored){
+
    if(this.standardQueryLabel !='' && this.standardQueryLabel != undefined){
   this.test = await getQueryByName({ name: this.standardQueryLabel });
+  this.tableData=this.test;
+this.isStateRestored=false;
    const result = await getQueryValues();
         this.statusOptions = Object.keys(result).map(key => ({
             label: key,
             value: result[key]
         }));
-this.tableData=this.test;
-this.isStateRestored=false;
+
  
     }
       else if(this.soql !=''){
@@ -605,15 +633,17 @@ this.isStateRestored=false;
             this.tableDataErrorMsg = 'The component encountered a problem: no records were found, or the datasource is incorrect. Please check your datasource (JSON/SOQL/FlowData).';
         }
         // Condition for flow record input
-        else if (this.flowRecord.length > 0 && !this.notFlowData) {
+        else if (this.flowRecord.length > 0) {  // && !this.notFlowData
+            console.log('in load table');
+            this.isLoadingData = true;
             this.tableData = JSON.parse(JSON.stringify(this.flowRecord));
             this.tableHeaders = Object.keys(this.tableData[0]);
             this.tableHeaderLabel = this.tableHeaders;
-            this.tableDataPn = this.flowRecord;
+            this.tableDataPn = JSON.parse(JSON.stringify(this.flowRecord));
             this.globalData = this.tableDataPn;
-            this.flowPresent = true;
-            this.notFlowData = false;
+           
             this.isLoading = false;
+
             
             this.enableInfiniteLoading = false;
 
@@ -856,6 +886,7 @@ this.isStateRestored=false;
 
     // Function to populate the table body.
     populateTableBody() {
+        console.log('populate table body');
 
         try {
             //Function to check if a value is a valid ID
@@ -1209,8 +1240,10 @@ this.isStateRestored=false;
             this.tableData = false;
             this.tableDataErrorMsg = 'There is some issue while populating data in the table';
         }
-       
-            this.saveState();
+       if(this.flowRecord.length==0){
+    this.saveState();
+       }
+        
         
       
     }
