@@ -253,4 +253,32 @@ public class DynamicDataTableHandlerTestClass {
         System.assertEquals(null, result.get('Inactive Query'), 'Inactive queries should not be present');
     }
     
+    
+    @isTest
+    static void testIsAutoNumber() {
+        String query = 'Select Id,CaseNumber from Case';
+        
+        Test.startTest();
+        Boolean result = DynamicDataTableHandler.isAutonumberField(query);
+        Test.stopTest();
+        
+        System.assertEquals(true,result);
+        
+        
+        
+        
+    }
+    
+    
+    @isTest
+    static void testgetObjName(){
+        String query = 'Select Id,CaseNumber from case';
+        
+         Test.startTest();
+        String result = DynamicDataTableHandler.getObjApiName(query);
+        Test.stopTest();
+        
+        System.assertEquals('Case',result);
+    }
+    
 }

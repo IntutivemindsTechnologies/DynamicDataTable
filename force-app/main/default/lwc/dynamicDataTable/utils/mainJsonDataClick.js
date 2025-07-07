@@ -1,8 +1,7 @@
 let handleJsonDataClickSec = (component) => {
   try {
-    console.log('data');
+   
     component.handleGlobalReset();
-      //component.saveState();
     component.isLoadingData = true;
     
     const textarea = component.template.querySelector('[data-id=myJsonTextarea]');
@@ -17,7 +16,12 @@ let handleJsonDataClickSec = (component) => {
 
       component.tableData = textarea.value;
       if (component.tableData.toLowerCase().trim().indexOf("[") === 0) {
-        console.log('json data');
+        component.reloadBtn = false;
+        component.jsonDataFlag = true;
+        component.soqlTextBoxQueryFlag = false;
+        component.savedQueryDataFlag = false;
+        component.queryDropdownData = '';
+        component.soql = '';
         component.standardQueryLabel='';
         component.showCustomError = false;
         component.showtoggle = false;
@@ -52,6 +56,11 @@ let handleJsonDataClickSec = (component) => {
 
       component.tableData = textarea2.value;
       if (component.tableData.toLowerCase().trim().indexOf("select") === 0) {
+        component.reloadBtn = true;
+        component.soqlTextBoxQueryFlag = true;
+        component.savedQueryDataFlag = false;
+        component.jsonDataFlag = false;
+
         component.isDrawerVisible = false;
         component.standardQueryLabel='';
         component.firstBox = false;
@@ -77,7 +86,7 @@ let handleJsonDataClickSec = (component) => {
         component.isDrawerOpen = true;
         component.mainDropdownVal = 'soqldata';
         component.soqlDropdown = true;
-        component.selectedLabel = 'Write own query';
+        component.selectedLabel = 'Write your own query';
         component.soqlTextBox = true;
         component.showCustomError = true;
         component.customErrorMessage = 'Please valid SOQL Query';
@@ -88,6 +97,14 @@ let handleJsonDataClickSec = (component) => {
     }
 
     if (component.queryDropdownData) {
+      
+       component.reloadBtn = true;
+       component.savedQueryDataFlag = true;
+       component.soqlTextBoxQueryFlag = false;
+        component.jsonDataFlag = false;
+
+     
+       component.savedQueryLabel = component.selectedLabel;
      component.isDrawerVisible = false;
       component.firstBox = false;
       component.isDrawerOpen = false;
@@ -110,9 +127,9 @@ let handleJsonDataClickSec = (component) => {
       component.objectLabel = component.objectLabelFromProperty;
     }
     component.loadTableData();
-    console.log('end');
+    
     component.stopColumnRender = false;
-    console.log('end2 :: ',component.tableData);
+    
   }
   catch (error) {
     console.error('error in ', error);

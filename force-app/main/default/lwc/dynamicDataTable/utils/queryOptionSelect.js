@@ -10,6 +10,7 @@ let handleOptionSelect = (event, component) => {
   if (component.selectedLabel == 'Write own query') {
     component.soqlTextBox = true;
     component.soqlLoadData = false;
+    component.soqlInput = '';
   }
   else {
     component.soqlLoadData = true;

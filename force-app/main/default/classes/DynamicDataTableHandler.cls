@@ -15,8 +15,8 @@ public with sharing class DynamicDataTableHandler {
         return false;
     }
     
-    
-    private static String getObjectNameFromQuery(String query){
+     @AuraEnabled(cacheable=true)
+    public static String getObjectNameFromQuery(String query){
         String objectName = '';
         Matcher objectMatcher = Pattern.compile(DynamicDataTableConstant.objectNameRegex).matcher(query);
         if (objectMatcher.find()) {
@@ -87,7 +87,7 @@ public with sharing class DynamicDataTableHandler {
                 fieldLabel=objToken+' '+fieldLabel;
             }   
         }
-        System.debug('field label ::'+ fieldLabel);
+       
         return fieldLabel;    
     } 
     
@@ -285,7 +285,7 @@ public with sharing class DynamicDataTableHandler {
                             sObj.put(fieldName, Boolean.valueOf((String) fieldValue));
                         }
                         else if (fieldResult.getType() == Schema.DisplayType.DOUBLE ) {
-                            System.debug('field value ::'+ fieldValue);
+                          
                             if (fieldValue == null || String.isBlank((String) fieldValue)) {
                                 sObj.put(fieldName, null);  
                             } else {
@@ -647,7 +647,7 @@ public static String getQueryByName(String name) {
         return null;
     } 
     
-System.debug('query is ::'+queryRecord[0].Query__c);
+
     return queryRecord[0].Query__c;
 }
 
@@ -659,6 +659,56 @@ System.debug('query is ::'+queryRecord[0].Query__c);
 
         List<PermissionSetAssignment> psa = [SELECT Id FROM PermissionSetAssignment WHERE AssigneeId = :currentUserId AND PermissionSet.Name = :permissionSetName LIMIT 1];
         return !psa.isEmpty();
+    }
+    
+    
+    
+    @AuraEnabled
+    public static Boolean isAutonumberField(String query){
+        try{
+            
+             String objectName = getObjectNameFromQuery(query);
+       
+            String modifiedName;
+             Map<String, Schema.SObjectType> globalDescribe = Schema.getGlobalDescribe();
+             if (!globalDescribe.containsKey(objectName)) {
+            return false; 
+        }
+            Schema.DescribeSObjectResult describeResult = globalDescribe.get(objectName).getDescribe();
+            modifiedName = objectName + 'Number';
+          
+            
+           // Schema.DescribeSObjectResult describeResult = objectName.SObjectType.getDescribe();
+Schema.SObjectField nameField = describeResult.fields.getMap().get(modifiedName);
+             if (nameField == null) {
+               
+            return false; 
+        }
+Schema.DescribeFieldResult nameDescribe = nameField.getDescribe();
+
+
+            return nameDescribe.isAutoNumber();
+        }
+        catch(Exception e){
+         return false;   
+        }
+
+    }
+    
+    
+     @AuraEnabled(cacheable =true)
+    public static String getObjApiName(String query){
+       // String objectName = 'case';
+         String name;
+          String objectName = getObjectNameFromQuery(query);
+        Map<String, Schema.SObjectType> globalDescribe = Schema.getGlobalDescribe();
+        if(globalDescribe.containsKey(objectName)){
+        Schema.DescribeSObjectResult describeResult=globalDescribe.get(objectName).getDescribe();
+        
+             name = describeResult.getName();
+          
+        }
+          return name;
     }
     
 }
