@@ -1,7 +1,7 @@
 let checkAllCheckboxes = (event,component,isMainCheckboxChecked,template,tableDataPn,selectedRows,output ) => {
     const clicked = event.target.checked;
     component.isMainCheckboxChecked = clicked;
-    console.log('main checkbox clicked ::');
+ 
     const checkboxes =  template.querySelectorAll('tbody input[type="checkbox"]');
 
     checkboxes.forEach(checkbox => {

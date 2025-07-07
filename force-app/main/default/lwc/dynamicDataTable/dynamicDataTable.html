@@ -87,6 +87,18 @@
                                                 <span class="slds-assistive-text">Reset</span>
 
                                             </li>
+                                            <template if:true={reloadBtn}>
+                                                <li class="slds-button-group-item slds-m-top_medium">
+
+                                                    <lightning-button-icon icon-name="utility:change_record_type"
+                                                        class="slds-float_right" alternative-text="Reload Data"
+                                                        title="Reload Data"
+                                                        onclick={handleReloadData}></lightning-button-icon>
+                                                    <span class="slds-assistive-text">Reload Data</span>
+
+                                                </li>
+                                            </template>
+
 
                                         </ul>
                                     </div>
@@ -309,7 +321,7 @@
                                                     <lightning-textarea data-id="myJsonTextarea" placeholder='[
 { "id": 1, "name": "Alice" },
 { "id": 2, "name": "Bob" }
- ]' name="myText" label="JSON Data" class="custom-height" onchange={handleJsonInputChange}>
+ ]' name="myText" label="JSON Data" class="custom-height" onchange={handleJsonInputChange} value={jsonInput}>
                                                     </lightning-textarea>
                                                     <template if:true={showCustomError}>
                                                         <div class="slds-text-color_error slds-m-top_x-small">
@@ -477,7 +489,7 @@
                                                     <lightning-textarea data-id="mySoqlTextarea" name="myText"
                                                         label="SOQL Query" class="custom-height"
                                                         placeholder="Please enter query here"
-                                                        onchange={handleSoqlnInputChange}>
+                                                        onchange={handleSoqlnInputChange} value={soqlInput}>
                                                     </lightning-textarea>
                                                     <template if:true={showCustomError}>
                                                         <div class="slds-text-color_error slds-m-top_x-small">
@@ -914,7 +926,7 @@
                                                     <lightning-textarea data-id="myJsonTextarea" placeholder='[
                        { "id": 1, "name": "Alice" },
                        { "id": 2, "name": "Bob" }
-                    ]' name="myText" label="JSON Data" onchange={handleJsonInputChange}>
+                    ]' name="myText" label="JSON Data" onchange={handleJsonInputChange} value={jsonInput}>
                                                     </lightning-textarea>
                                                     <template if:true={showCustomError}>
                                                         <div class="slds-text-color_error slds-m-top_x-small">
@@ -988,10 +1000,10 @@
                                                                                 <div class="slds-media slds-listbox__option slds-listbox__option_plain slds-media_small"
                                                                                     role="option"
                                                                                     onclick={handleOptionSelect}
-                                                                                    data-label="Write own query">
+                                                                                    data-label="Write your own query">
                                                                                     <span class="slds-media__body">
                                                                                         <span class="slds-truncate"
-                                                                                            title="Write own query">Write
+                                                                                            title="Write your own query">Write
                                                                                             your
                                                                                             own query</span>
                                                                                     </span>
@@ -1084,7 +1096,7 @@
                                                     <lightning-textarea data-id="mySoqlTextarea" name="myText"
                                                         label="SOQL Query" class="custom-height"
                                                         placeholder="Please enter query here"
-                                                        onchange={handleSoqlnInputChange}>
+                                                        onchange={handleSoqlnInputChange} value={soqlInput}>
                                                     </lightning-textarea>
                                                     <template if:true={showCustomError}>
                                                         <div class="slds-text-color_error slds-m-top_x-small">
@@ -1351,7 +1363,7 @@
                                             <lightning-textarea data-id="myJsonTextarea" placeholder='[
                        { "id": 1, "name": "Alice" },
                        { "id": 2, "name": "Bob" }
-                    ]' name="myText" label="JSON Data" onchange={handleJsonInputChange}>
+                    ]' name="myText" label="JSON Data" onchange={handleJsonInputChange} value={jsonInput}>
                                             </lightning-textarea>
                                             <template if:true={showCustomError}>
                                                 <div class="slds-text-color_error slds-m-top_x-small">
@@ -1509,7 +1521,8 @@
                                         <div class="slds-p-around_small ">
                                             <lightning-textarea data-id="mySoqlTextarea" name="myText"
                                                 label="SOQL Query" class="custom-height"
-                                                placeholder="Please enter query here" onchange={handleSoqlnInputChange}>
+                                                placeholder="Please enter query here" value={soqlInput}
+                                                onchange={handleSoqlnInputChange}>
                                             </lightning-textarea>
                                             <template if:true={showCustomError}>
                                                 <div class="slds-text-color_error slds-m-top_x-small">

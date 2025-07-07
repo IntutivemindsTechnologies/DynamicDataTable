@@ -1,8 +1,5 @@
 let handleJsonDataClick = (component) =>{
-
 component.handleGlobalReset();
-
-        // component.saveState();
         component.isLoadingData = true;
      
         
@@ -20,7 +17,14 @@ component.handleGlobalReset();
           
             component.tableData = textarea.value;
            if( component.tableData.toLowerCase().trim().indexOf("[") === 0){
-          
+          component.reloadBtn = false;
+         component.jsonDataFlag = true;
+        component.soqlTextBoxQueryFlag = false;
+        component.savedQueryDataFlag = false;
+        component.queryDropdownData = '';
+        component.soql = '';
+      component.isStateRestored = false;
+
             component.showCustomError=false;
             component.standardQueryLabel='';
             component.showtoggle=false;
@@ -56,7 +60,11 @@ component.handleGlobalReset();
              component.tableData = textarea2.value;
              component.soql = textarea2.value;
             if( component.tableData.toLowerCase().trim().indexOf("select") === 0){
-            
+             component.reloadBtn = true;
+ component.soqlTextBoxQueryFlag = true;
+        component.savedQueryDataFlag = false;
+         component.jsonDataFlag = false;
+
 component.isDrawerVisible = false;
             component.firstBox=false;
             component.isDrawerOpen=false;
@@ -80,14 +88,14 @@ component.isDrawerVisible = false;
            component.resetVariables();
             }
             else{
-component.isLoading=false;
+                component.isLoading=false;
                 component.isDrawerVisible = true;
             
           
-            component.isDrawerOpen=true;
+              component.isDrawerOpen=true;
               component.mainDropdownVal='soqldata';
               component.soqlDropdown=true;
-              component.selectedLabel='Write own query';
+              component.selectedLabel='Write your own query';
               component.soqlTextBox=true;
 
 
@@ -102,7 +110,12 @@ component.isLoading=false;
 
     
      if(component.queryDropdownData){
-      
+      component.reloadBtn = true;
+        component.savedQueryDataFlag = true;
+        component.soqlTextBoxQueryFlag = false;
+        component.jsonDataFlag = false;
+
+       component.savedQueryLabel = component.selectedLabel;
  component.isDrawerVisible = false;
              component.firstBox=false;
             component.isDrawerOpen=false;

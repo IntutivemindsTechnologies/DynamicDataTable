@@ -7,12 +7,14 @@ let handleDropChange = (event,component) =>{
       
       component.customErrorMessage='';
       let selectedVal = event.detail.value;
+      component.selectedValueFlow = selectedVal;
       if( selectedVal == 'jsondata'){
         component.jsonInput='';
-        component.selectedLabel='';
-        component.queryDropdownData='';
-        component.soql = '';
+       // component.selectedLabel='';
+       // component.queryDropdownData='';
+        //component.soql = '';
         component.mainDropdownVal =  event.detail.value;
+        
         component.successToastMessage = false;
          component.jsonTextBox=true;
          component.soqlDropdown = false;
@@ -28,12 +30,19 @@ let handleDropChange = (event,component) =>{
       }
 
       else{
+        component.reloadBtn = false;
+        component.selectedValueFlow = selectedVal;
         component.notFlowData = false;
         component.mainDropdownVal =  event.detail.value;     
         component.isDrawerVisible=false;
         component.isDrawerOpen=false;   
-        component.successToastMessage = false;    
+        component.successToastMessage = false;  
+      
         component.isLoading = true;
+          setTimeout(() => {
+            component.isLoadingData = true;
+        }, 1000);
+        
         component.soqlDropdown = false;
         component.jsonTextBox=false;   
        component.showtoggle=false;
